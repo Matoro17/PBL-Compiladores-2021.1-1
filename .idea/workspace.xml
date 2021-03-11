@@ -4,9 +4,7 @@
     <list default="true" id="ea4aebdd-3bde-46f0-b413-9edce2297bc8" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/controllers/analyzers/lexical_analyzer.py" beforeDir="false" afterPath="$PROJECT_DIR$/controllers/analyzers/lexical_analyzer.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/models/lexical_information.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/lexical_information.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/models/token.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/token.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/util/lexycal/lexical_states.py" beforeDir="false" afterPath="$PROJECT_DIR$/util/lexycal/lexical_states.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/entrada3.txt" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/util/lexycal/lexical_structure.py" beforeDir="false" afterPath="$PROJECT_DIR$/util/lexycal/lexical_structure.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />

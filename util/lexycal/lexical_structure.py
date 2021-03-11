@@ -67,8 +67,8 @@ class LexycalStructure:
         else:
             return 0
 
-    def is_operator(self, previuos_character, character, next_character) -> int:
-        if self.__operadores.__contains__(previuos_character + character):
+    def is_operator(self, character, next_character) -> int:
+        if self.__operadores.__contains__(character + next_character):
             return 2
         elif self.__operadores.__contains__(character):
             return 1

@@ -48,16 +48,15 @@ class LexicalAnalyzer:
             )
 
     def __delimiter_state(self, character):
-        self.__lexical_info.add_character(character)
         self.__tokens.append(
             self.__lexical_info.generate_token(TokenTypes.DELIMITER)
         )
 
     def __is_character_indentifier(self, character):
-        return 48 <= ord(character) <= 57 \
-               or ord(character) == 95 \
-               or 65 <= ord(character) <= 90 \
-               or 97 <= ord(character) <= 122
+        return ord("0") <= ord(character) <= ord("9") \
+               or ord(character) == ord("_") \
+               or ord("A") <= ord(character) <= ord("Z") \
+               or ord("a") <= ord(character) <= ord("z")
 
     def __identifier_state(self, character, next_character):
         if self.__is_character_indentifier(character):
@@ -104,8 +103,6 @@ class LexicalAnalyzer:
             character = line_data[column]
             if column + 1 < len(line_data):
                 next_character = line_data[column + 1]
-            else:
-                next_character = ""
             #print(
             #   len(line_data), line_data.replace(" ", "").replace("\n", "\\n"),
             #   "PRE '%s'" % previous_character,
@@ -145,10 +142,10 @@ class LexicalAnalyzer:
                     self.__lexical_info.add_character(character)
                     self.__lexical_info.state = LexicalStates.LOGICAL_OPERATOR
 
-                elif self.__lexical_structure.is_operator(previous_character, character, next_character):
-                    if self.__lexical_structure.is_operator(previous_character, character, next_character) == 1:
+                elif self.__lexical_structure.is_operator(character, next_character):
+                    if self.__lexical_structure.is_operator(character, next_character) == 1:
                         self.__lexical_info.add_character(character)
-                    elif self.__lexical_structure.is_operator(previous_character, character, next_character) == 2:
+                    elif self.__lexical_structure.is_operator(character, next_character) == 2:
                         self.__lexical_info.add_character(previous_character, character)
                     else:
                         self.__errors_list.append(
