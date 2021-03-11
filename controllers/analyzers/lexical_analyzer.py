@@ -35,12 +35,13 @@ class LexicalAnalyzer:
             )
 
     def __line_comment_state(self, character):
-        self.__lexical_info.add_character(character)
         if character == "\n":
             self.__lexical_info.state = LexicalStates.NIL
             self.__tokens.append(
                 self.__lexical_info.generate_token(TokenTypes.LINE_COMMENT)
             )
+        else:
+            self.__lexical_info.add_character(character)
 
     def __string_state(self, character: str):
         self.__lexical_info.add_character(character)
@@ -147,6 +148,7 @@ class LexicalAnalyzer:
                     self.__lexical_info.state = LexicalStates.BLOCK_COMMENT
 
                 elif next_character == "/" and character == "/":
+                    self.__lexical_info.add_character(character)
                     self.__lexical_info.state = LexicalStates.LINE_COMMENT
 
                 elif character == "-" and next_character.isdigit():
