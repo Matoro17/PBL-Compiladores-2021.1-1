@@ -1,7 +1,6 @@
 import os
 from collections.abc import Callable
 from os.path import isfile, join
-from pathlib import Path
 
 
 class InputReader:

@@ -6,7 +6,7 @@ class LexycalStructure:
             "=": ["", "="], "!": ["="], ">": ["", "="], "<": ["", "="]
         }
         self.__logical_operators = ["&&", "||", "!"]
-        self.__delimeters = [";", ",", ".", "(", ")", "[", "]", "{", "}"]
+        self.__delimiters = [";", ",", ".", "(", ")", "[", "]", "{", "}"]
         self.__reserved_words = [
             "var",
             "const",
@@ -38,8 +38,8 @@ class LexycalStructure:
     def get_reserved_words(self) -> list[str]:
         return self.__reserved_words
 
-    def get_delimeters(self) -> list[str]:
-        return self.__delimeters
+    def get_delimiter(self) -> list[str]:
+        return self.__delimiters
 
     def get_arithmetic_operators(self) -> list[str]:
         return self.__arithmetic_operators
@@ -47,11 +47,18 @@ class LexycalStructure:
     def get_idk(self) -> list[str]:
         return self.__separadores
 
-    def is_delimiter(self, character) -> bool:
-        return self.__delimeters.__contains__(character)
+    def is_delimiter(self, character: str) -> bool:
+        return character in self.__delimiters
+
+    def is_end_lexeme(self, character: str) -> bool:
+        """
+        Verify if the given character is a delimiter or a whitespace
+        :rtype: object
+        """
+        return self.is_delimiter(character) or character.isspace()
 
     def is_reserved(self, lexeme: str) -> bool:
-        return self.__reserved_words.__contains__(lexeme)
+        return lexeme in self.__reserved_words
 
     def is_relational(self, character: str, next_character="") -> [bool, bool]:
         valid_next_chars = self.__relational_operators.get(character)

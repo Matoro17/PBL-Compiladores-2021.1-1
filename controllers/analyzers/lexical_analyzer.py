@@ -1,9 +1,11 @@
 from typing import BinaryIO
 
 from models.lexical_information import LexicalInformation
+from models.token import Token
 from util.lexycal.lexical_states import LexicalStates
 from util.lexycal.lexical_structure import LexycalStructure
 from util.token_types import TokenTypes
+import util.lexycal.lexical_validators as validators
 
 
 class LexicalAnalyzer:
@@ -13,10 +15,13 @@ class LexicalAnalyzer:
         self.__tokens = []
         self.__errors_list = []
 
-    def _store_token(self, token_type: TokenTypes):
-        self.__tokens.append(
-            self.__lexical_info.generate_token(token_type)
-        )
+    def _store_token(self, token_type: TokenTypes, is_error=False) -> Token:
+        new_token = self.__lexical_info.generate_token(token_type)
+        if is_error:
+            self.__errors_list.append(new_token)
+        else:
+            self.__tokens.append(new_token)
+        return new_token
 
     def get_errors(self) -> list[str]:
         return self.__errors_list
@@ -45,13 +50,26 @@ class LexicalAnalyzer:
                 self.__lexical_info.generate_token(TokenTypes.STRING)
             )
 
-    def __number_state(self, character):
-        self.__lexical_info.add_character(character)
-        if 48 <= ord(character) <= 57:
+    def __number_state(self, character: str, next_character: str) -> None:
+        lexeme = self.__lexical_info.get_lexeme()
+        if self.__lexical_structure.is_end_lexeme(character) and character != ".":
             self.__lexical_info.state = LexicalStates.NIL
-            self.__tokens.append(
-                self.__lexical_info.generate_token(TokenTypes.NUMBER)
-            )
+            if validators.is_valid_number(lexeme):
+                self._store_token(TokenTypes.NUMBER)
+            else:
+                self._store_token(TokenTypes.MALFORMED_NUMBER, True)
+        self.__lexical_info.add_character(character)
+        if character.isnumeric():
+            if next_character != "." and not next_character.isnumeric():
+                if self.__lexical_structure.is_delimiter(next_character) or next_character.isspace():
+                    self.__lexical_info.state = LexicalStates.NIL
+                    if validators.is_valid_number(lexeme):
+                        self._store_token(TokenTypes.NUMBER)
+                    else:
+                        self._store_token(TokenTypes.MALFORMED_NUMBER, True)
+        elif character != "." or next_character.isspace():
+            self.__lexical_info.state = LexicalStates.NIL
+            self._store_token(TokenTypes.MALFORMED_NUMBER, True)
 
     def __delimiter_state(self, character):
         self.__tokens.append(
@@ -65,7 +83,7 @@ class LexicalAnalyzer:
                or ord("A") <= ord(character) <= ord("Z") \
                or ord("a") <= ord(character) <= ord("z")
 
-    def __identifier_state(self, character, next_character):
+    def __identifier_state(self, character: str, next_character):
         if self.__is_character_identifier(character):
             self.__lexical_info.add_character(character)
         elif character == " " or character == ";" or character == "\n":
@@ -84,7 +102,7 @@ class LexicalAnalyzer:
                 self.__lexical_info.generate_token(TokenTypes.INVALID_SYMBOL)
             )
 
-    def __logical_ope_state(self, character, next_character):
+    def __logical_op_state(self, character: str, next_character):
         if self.__lexical_structure.is_logical(character, next_character) == 1:
             self.__lexical_info.add_character(character)
         elif self.__lexical_structure.is_logical(character, next_character) == 2:
@@ -93,7 +111,7 @@ class LexicalAnalyzer:
             self.__lexical_info.generate_token(TokenTypes.LOGIC_OPERATOR)
         )
 
-    def __relational_op_state(self, character, next_character):
+    def __relational_op_state(self, character: str, next_character):
         if self.__lexical_structure.is_relational(character, next_character) == 1:
             self.__lexical_info.add_character(character)
         elif self.__lexical_structure.is_relational(character, next_character) == 2:
@@ -121,6 +139,7 @@ class LexicalAnalyzer:
             if self.__lexical_info.state == LexicalStates.NIL:
                 # Start point, verify first character in lexeme
 
+                # Relational return
                 relational_type = (self.__lexical_structure.is_relational(character, next_character))
 
                 if character == "/" and next_character == "*":
@@ -129,6 +148,10 @@ class LexicalAnalyzer:
 
                 elif next_character == "/" and character == "/":
                     self.__lexical_info.state = LexicalStates.LINE_COMMENT
+
+                elif character == "-" and next_character.isdigit():
+                    self.__lexical_info.add_character(character)
+                    self.__lexical_info.state = LexicalStates.NUMBER
 
                 elif character == "\"":
                     self.__lexical_info.add_character(character)
@@ -175,12 +198,13 @@ class LexicalAnalyzer:
                     self.__errors_list.append(
                         self.__lexical_info.generate_token(TokenTypes.INVALID_SYMBOL)
                     )
+            # Here start all other states
             elif self.__lexical_info.state == LexicalStates.BLOCK_COMMENT:
                 self.__block_comment_state(previous_character, str(character))
             elif self.__lexical_info.state == LexicalStates.STRING:
                 self.__string_state(character)
             elif self.__lexical_info.state == LexicalStates.NUMBER:
-                self.__number_state(character)
+                self.__number_state(character, next_character)
             elif self.__lexical_info.state == LexicalStates.DELIMITER:
                 self.__delimiter_state(character)
             elif self.__lexical_info.state == LexicalStates.IDENTIFIER:
@@ -188,7 +212,7 @@ class LexicalAnalyzer:
             elif self.__lexical_info.state == LexicalStates.LINE_COMMENT:
                 self.__line_comment_state(character)
             elif self.__lexical_info.state == LexicalStates.LOGICAL_OPERATOR:
-                self.__logical_ope_state(character, next_character)
+                self.__logical_op_state(character, next_character)
             elif self.__lexical_info.state == LexicalStates.RELATIONAL_OPERATOR:
                 self.__relational_op_state(character, next_character)
             column += 1
