@@ -7,20 +7,20 @@
       <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
       <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/controllers/analyzers/lexical_analyzer.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models/lexical_information.py" afterDir="false" />
       <change afterPath="$PROJECT_DIR$/util/lexycal/lexical_states.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/util/token_types.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/controllers/analyzers/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/controllers/analyzers/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/controllers/analyzers/lexical_analyzer.py" beforeDir="false" afterPath="$PROJECT_DIR$/controllers/analyzers/lexical_analyzer.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/controllers/analyzers/lexycal_analyzer.py" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/controllers/analyzers/lexycal_information.py" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/controllers/file_reader.py" beforeDir="false" afterPath="$PROJECT_DIR$/controllers/file_reader.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/controllers/input_reader.py" beforeDir="false" afterPath="$PROJECT_DIR$/controllers/input_reader.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/models/lexical_information.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/lexical_information.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/models/token.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/token.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/util/lexycal/lexical_structure.py" beforeDir="false" afterPath="$PROJECT_DIR$/util/lexycal/lexical_structure.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/util/token_types.py" beforeDir="false" afterPath="$PROJECT_DIR$/util/token_types.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
