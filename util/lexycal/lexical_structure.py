@@ -3,7 +3,7 @@ class LexycalStructure:
         self.__separadores = [";", "[", "]", ")", "(", ")", "{", "}", ",", "=", "."]
         self.__operadores = ["-", "+", "/", "*", "^"]
         self.__delimeters = [";"]
-        self.__reservada_list = [
+        self.__reserved_words = [
             "int",
             "float",
             "char",
@@ -19,7 +19,7 @@ class LexycalStructure:
         ]
 
     def get_reserved_words(self) -> list[str]:
-        return self.__reservada_list
+        return self.__reserved_words
 
     def get_delimeters(self) -> list[str]:
         return self.__delimeters

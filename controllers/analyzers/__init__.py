@@ -1,4 +1,3 @@
-from controllers.analyzers.lexycal_analyzer import LexycalAnalizer
-from controllers.analyzers.lexycal_information import LexycalInformation
+from controllers.analyzers.lexical_analyzer import LexicalAnalyzer
 
-singletone_lexycal = LexycalAnalizer()
+singletone_lexycal = LexicalAnalyzer()
