@@ -11,7 +11,7 @@ class LexicalInformation:
         self.line_number = 0
         self.column = 0
 
-    def add_character(self, first_character: int, second_character=""):
+    def add_character(self, first_character: str, second_character=""):
         self.__lexeme_builder.append(first_character)
         if second_character != "":
             self.__lexeme_builder.append(second_character)

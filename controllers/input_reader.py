@@ -13,6 +13,6 @@ class InputReader:
         if os.path.exists(self.__source_directory):
             for filename in os.listdir(self.__source_directory):
                 complete_filename = join(self.__source_directory, filename)
-                if isfile(complete_filename):
+                if isfile(complete_filename) and complete_filename.endswith(".txt"):
                     all_success = read_file_callback(complete_filename)
         return all_success

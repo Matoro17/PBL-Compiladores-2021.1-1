@@ -1,5 +1,5 @@
 from typing import BinaryIO
-from controllers.analyzers import singletone_lexycal
+from controllers.analyzers import singletone_lexical
 
 
 class FileReader:
@@ -18,7 +18,7 @@ class FileReader:
 
     def start(self, filename: str) -> bool:
         if self.open_file(filename):
-            singletone_lexycal.start(self.__file_pointer)
+            singletone_lexical.start(self.__file_pointer)
             return True
 
         print("Error on reading file %s" % filename)

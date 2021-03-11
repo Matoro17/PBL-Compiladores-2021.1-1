@@ -14,6 +14,12 @@ class LexicalAnalyzer:
     def get_errors(self) -> list[str]:
         return self.__errors_list
 
+    def __block_comment_state(self, previous_character: str, character: str):
+        self.__lexical_info.add_character(character)
+        if character == "/" and previous_character == "*":
+            self.__lexical_info.state = LexicalStates.NIL
+            self.__tokens.append(self.__lexical_info.generate_token(TokenTypes.BLOCK_COMMENT))
+
     def __parse_line(self, line_data: bytes):
         previous_character = ""
         for column in range(0, len(line_data)):
@@ -32,11 +38,7 @@ class LexicalAnalyzer:
                     self.__lexical_info.add_character(previous_character, character)
                     self.__lexical_info.state = LexicalStates.BLOCK_COMMENT
             elif self.__lexical_info.state == LexicalStates.BLOCK_COMMENT:
-                self.__lexical_info.add_character(character)
-                if character == "/" and previous_character == "*":
-                    self.__lexical_info.state = LexicalStates.NIL
-                    self.__tokens.append(self.__lexical_info.generate_token(TokenTypes.BLOCK_COMMENT))
-
+                self.__block_comment_state(previous_character, str(character))
             column += 1
             previous_character = character
             if self.__lexical_info.state != LexicalStates.BLOCK_COMMENT:
