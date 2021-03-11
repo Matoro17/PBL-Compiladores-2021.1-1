@@ -21,3 +21,6 @@ class LexicalInformation:
         self.__lexeme_builder.clear()
         self.state = LexicalStates.NIL
         return new_token
+
+    def get_lexeme(self) -> str:
+        return "".join(self.__lexeme_builder)

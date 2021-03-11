@@ -10,3 +10,4 @@ class LexicalStates(Enum):
     NUMBER = 5
     LOGICAL_OPERATOR = 6
     RELATIONAL_OPERATOR = 7
+    DELIMITER = 8

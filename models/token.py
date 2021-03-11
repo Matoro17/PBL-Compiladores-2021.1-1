@@ -23,7 +23,7 @@ class Token:
         return self.__token_type
 
     def __str__(self) -> str:
-        return "%i:%i$ %s - %s" % (self.__line, self.__column, self.__lexeme, self.__token_type.value)
+        return "%i %s %s\n" % (self.__line, self.__token_type.value, self.__lexeme)
 
     def __repr__(self) -> str:
         return str(self)
