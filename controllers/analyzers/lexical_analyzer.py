@@ -1,4 +1,5 @@
 from typing import BinaryIO
+
 from models.lexical_information import LexicalInformation
 from util.lexycal.lexical_states import LexicalStates
 from util.lexycal.lexical_structure import LexycalStructure
@@ -11,6 +12,11 @@ class LexicalAnalyzer:
         self.__lexical_structure = LexycalStructure()
         self.__tokens = []
         self.__errors_list = []
+
+    def _store_token(self, token_type: TokenTypes):
+        self.__tokens.append(
+            self.__lexical_info.generate_token(token_type)
+        )
 
     def get_errors(self) -> list[str]:
         return self.__errors_list
@@ -52,14 +58,15 @@ class LexicalAnalyzer:
             self.__lexical_info.generate_token(TokenTypes.DELIMITER)
         )
 
-    def __is_character_indentifier(self, character):
+    @staticmethod
+    def __is_character_identifier(character):
         return ord("0") <= ord(character) <= ord("9") \
                or ord(character) == ord("_") \
                or ord("A") <= ord(character) <= ord("Z") \
                or ord("a") <= ord(character) <= ord("z")
 
     def __identifier_state(self, character, next_character):
-        if self.__is_character_indentifier(character):
+        if self.__is_character_identifier(character):
             self.__lexical_info.add_character(character)
         elif character == " " or character == ";" or character == "\n":
             self.__lexical_info.state = LexicalStates.NIL
@@ -86,7 +93,7 @@ class LexicalAnalyzer:
             self.__lexical_info.generate_token(TokenTypes.LOGIC_OPERATOR)
         )
 
-    def __lexical_ope_state(self, character, next_character):
+    def __relational_op_state(self, character, next_character):
         if self.__lexical_structure.is_relational(character, next_character) == 1:
             self.__lexical_info.add_character(character)
         elif self.__lexical_structure.is_relational(character, next_character) == 2:
@@ -97,20 +104,25 @@ class LexicalAnalyzer:
 
     def __parse_line(self, line_data: bytes):
         previous_character = ""
-        next_character = ""
         for column in range(0, len(line_data)):
             self.__lexical_info.column = column + 1
-            character = line_data[column]
+            character = str(line_data[column])
+
+            # look ahead variable
+            next_character = ""
             if column + 1 < len(line_data):
                 next_character = line_data[column + 1]
-            #print(
+            # print(
             #   len(line_data), line_data.replace(" ", "").replace("\n", "\\n"),
             #   "PRE '%s'" % previous_character,
             #   "CUR '%s'" % character.replace("\n", "\\n"),
             #   self.__lexical_info.state
-            #)
+            # )
             if self.__lexical_info.state == LexicalStates.NIL:
                 # Start point, verify first character in lexeme
+
+                relational_type = (self.__lexical_structure.is_relational(character, next_character))
+
                 if character == "/" and next_character == "*":
                     self.__lexical_info.add_character(previous_character, character)
                     self.__lexical_info.state = LexicalStates.BLOCK_COMMENT
@@ -122,7 +134,7 @@ class LexicalAnalyzer:
                     self.__lexical_info.add_character(character)
                     self.__lexical_info.state = LexicalStates.STRING
 
-                elif 48 <= ord(character) <= 57:
+                elif ord("0") <= ord(character) <= ord("9"):
                     self.__lexical_info.add_character(character)
                     self.__lexical_info.state = LexicalStates.NUMBER
 
@@ -134,9 +146,12 @@ class LexicalAnalyzer:
                     self.__lexical_info.add_character(character)
                     self.__lexical_info.state = LexicalStates.IDENTIFIER
 
-                elif self.__lexical_structure.is_relational(character, next_character):
+                elif relational_type[0]:
                     self.__lexical_info.add_character(character)
-                    self.__lexical_info.state = LexicalStates.RELATIONAL_OPERATOR
+                    if relational_type[1]:
+                        self.__lexical_info.state = LexicalStates.RELATIONAL_OPERATOR
+                    else:
+                        self._store_token(TokenTypes.RELATIONAL_OPERATOR)
 
                 elif self.__lexical_structure.is_logical(character, next_character):
                     self.__lexical_info.add_character(character)
@@ -155,7 +170,7 @@ class LexicalAnalyzer:
                         self.__lexical_info.generate_token(TokenTypes.ARITHMETIC_OPERATOR)
                     )
                 elif ord(character) != 10 and ord(character) != 9 and ord(character) != 32:
-                    print("prev:" + previous_character + "current: "+ character + "next: " + next_character)
+                    print("prev:" + previous_character + "current: " + character + "next: " + next_character)
                     self.__lexical_info.add_character(character)
                     self.__errors_list.append(
                         self.__lexical_info.generate_token(TokenTypes.INVALID_SYMBOL)
@@ -175,7 +190,7 @@ class LexicalAnalyzer:
             elif self.__lexical_info.state == LexicalStates.LOGICAL_OPERATOR:
                 self.__logical_ope_state(character, next_character)
             elif self.__lexical_info.state == LexicalStates.RELATIONAL_OPERATOR:
-                self.__lexical_ope_state(character, next_character)
+                self.__relational_op_state(character, next_character)
             column += 1
             previous_character = character
 
