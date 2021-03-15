@@ -112,14 +112,15 @@ class LexicalAnalyzer:
             self.__lexical_info.generate_token(TokenTypes.LOGIC_OPERATOR)
         )
 
-    def __relational_op_state(self, character: str, next_character):
-        if self.__lexical_structure.is_relational(character, next_character) == 1:
+    def __relational_op_state(self, character: str, previous_character: str):
+        valid_relational = self.__lexical_structure.is_relational(previous_character, character)
+        if valid_relational[1]:
             self.__lexical_info.add_character(character)
-        elif self.__lexical_structure.is_relational(character, next_character) == 2:
-            self.__lexical_info.add_character(character, next_character)
-        self.__tokens.append(
-            self.__lexical_info.generate_token(TokenTypes.RELATIONAL_OPERATOR)
-        )
+            self._store_token(TokenTypes.RELATIONAL_OPERATOR)
+        else:
+            self._store_token(TokenTypes.RELATIONAL_OPERATOR)
+            self.__lexical_info.add_character(character)
+        self.__lexical_info.state = LexicalStates.NIL
 
     def __parse_line(self, line_data: bytes):
         previous_character = ""
@@ -216,7 +217,7 @@ class LexicalAnalyzer:
             elif self.__lexical_info.state == LexicalStates.LOGICAL_OPERATOR:
                 self.__logical_op_state(character, next_character)
             elif self.__lexical_info.state == LexicalStates.RELATIONAL_OPERATOR:
-                self.__relational_op_state(character, next_character)
+                self.__relational_op_state(character, previous_character)
             column += 1
             previous_character = character
 
