@@ -24,3 +24,8 @@ class LexicalInformation:
 
     def get_lexeme(self) -> str:
         return "".join(self.__lexeme_builder)
+
+    def get_first_character(self) -> str:
+        if len(self.__lexeme_builder) > 0:
+            return self.__lexeme_builder[0]
+        return ""
