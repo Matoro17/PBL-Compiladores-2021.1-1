@@ -1,11 +1,12 @@
+from collections.abc import Callable
 from typing import BinaryIO
 
+import util.lexycal.lexical_validators as validators
 from models.lexical_information import LexicalInformation
 from models.token import Token
 from util.lexycal.lexical_states import LexicalStates
 from util.lexycal.lexical_structure import LexicalStructure
 from util.token_types import TokenTypes
-import util.lexycal.lexical_validators as validators
 
 
 class LexicalAnalyzer:
@@ -43,7 +44,10 @@ class LexicalAnalyzer:
     def __string_state(self, previous_character: str, character: str):
         self.__lexical_info.add_character(character)
         # TODO Still needs to fix problems like "hello \\"
-        if previous_character != "\\" and character == self.__lexical_info.get_first_character():
+        if (
+                previous_character != "\\"
+                and character == self.__lexical_info.get_first_character()
+        ):
             self.__lexical_info.state = LexicalStates.NIL
             self._store_token(TokenTypes.STRING)
 
@@ -58,7 +62,10 @@ class LexicalAnalyzer:
         self.__lexical_info.add_character(character)
         if character.isnumeric():
             if next_character != "." and not next_character.isnumeric():
-                if self.__lexical_structure.is_delimiter(next_character) or next_character.isspace():
+                if (
+                        self.__lexical_structure.is_delimiter(next_character)
+                        or next_character.isspace()
+                ):
                     self.__lexical_info.state = LexicalStates.NIL
                     if validators.is_valid_number(lexeme):
                         self._store_token(TokenTypes.NUMBER)
@@ -70,10 +77,12 @@ class LexicalAnalyzer:
 
     @staticmethod
     def __is_character_identifier(character):
-        return ord("0") <= ord(character) <= ord("9") \
-               or ord(character) == ord("_") \
-               or ord("A") <= ord(character) <= ord("Z") \
-               or ord("a") <= ord(character) <= ord("z")
+        return (
+                ord("0") <= ord(character) <= ord("9")
+                or ord(character) == ord("_")
+                or ord("A") <= ord(character) <= ord("Z")
+                or ord("a") <= ord(character) <= ord("z")
+        )
 
     def __identifier_state(self, character: str, next_character):
         if self.__is_character_identifier(character):
@@ -88,35 +97,45 @@ class LexicalAnalyzer:
             self.__lexical_info.add_character(character)
             self._store_token(TokenTypes.INVALID_SYMBOL)
 
-    def __arithmetic_op_state(self, character: str, previous_character: str):
-        valid_logical = self.__lexical_structure.is_arithmetic(previous_character, character)
-        if valid_logical[1]:
+    def __operator_state(
+            self,
+            callback: Callable[[str, str], [bool, bool]],
+            token_type: TokenTypes,
+            character: str,
+            previous_character: str,
+    ) -> None:
+        valid_operator = callback(previous_character, character)
+        if valid_operator[1]:
             self.__lexical_info.add_character(character)
-            self._store_token(TokenTypes.ARITHMETIC_OPERATOR)
+            self._store_token(token_type)
         else:
-            self._store_token(TokenTypes.ARITHMETIC_OPERATOR)
+            self._store_token(token_type)
             self.__lexical_info.add_character(character)
         self.__lexical_info.state = LexicalStates.NIL
+
+    def __arithmetic_op_state(self, character: str, previous_character: str):
+        self.__operator_state(
+            self.__lexical_structure.is_arithmetic,
+            TokenTypes.ARITHMETIC_OPERATOR,
+            character,
+            previous_character,
+        )
 
     def __logical_op_state(self, character: str, previous_character: str):
-        valid_logical = self.__lexical_structure.is_logical(previous_character, character)
-        if valid_logical[1]:
-            self.__lexical_info.add_character(character)
-            self._store_token(TokenTypes.LOGIC_OPERATOR)
-        else:
-            self._store_token(TokenTypes.LOGIC_OPERATOR)
-            self.__lexical_info.add_character(character)
-        self.__lexical_info.state = LexicalStates.NIL
+        self.__operator_state(
+            self.__lexical_structure.is_logical,
+            TokenTypes.LOGIC_OPERATOR,
+            character,
+            previous_character,
+        )
 
     def __relational_op_state(self, character: str, previous_character: str):
-        valid_relational = self.__lexical_structure.is_relational(previous_character, character)
-        if valid_relational[1]:
-            self.__lexical_info.add_character(character)
-            self._store_token(TokenTypes.RELATIONAL_OPERATOR)
-        else:
-            self._store_token(TokenTypes.RELATIONAL_OPERATOR)
-            self.__lexical_info.add_character(character)
-        self.__lexical_info.state = LexicalStates.NIL
+        self.__operator_state(
+            self.__lexical_structure.is_relational,
+            TokenTypes.RELATIONAL_OPERATOR,
+            character,
+            previous_character,
+        )
 
     def __parse_line(self, line_data: bytes):
         previous_character = ""
@@ -139,9 +158,15 @@ class LexicalAnalyzer:
                 # Start point, verify first character in lexeme
 
                 # Relational return
-                relational_type = (self.__lexical_structure.is_relational(character, next_character))
-                logical_type = (self.__lexical_structure.is_logical(character, next_character))
-                arithmetic_type = (self.__lexical_structure.is_arithmetic(character, next_character))
+                relational_type = self.__lexical_structure.is_relational(
+                    character, next_character
+                )
+                logical_type = self.__lexical_structure.is_logical(
+                    character, next_character
+                )
+                arithmetic_type = self.__lexical_structure.is_arithmetic(
+                    character, next_character
+                )
 
                 # Top Priorities states
                 if character == "/" and next_character == "*":
@@ -152,7 +177,7 @@ class LexicalAnalyzer:
                     self.__lexical_info.add_character(character)
                     self.__lexical_info.state = LexicalStates.LINE_COMMENT
 
-                elif character == "\"" or character == "\'":
+                elif character == '"' or character == "'":
                     self.__lexical_info.add_character(character)
                     self.__lexical_info.state = LexicalStates.STRING
 
@@ -194,7 +219,11 @@ class LexicalAnalyzer:
                     self.__lexical_info.add_character(character)
                     self._store_token(TokenTypes.DELIMITER)
 
-                elif ord(character) != 10 and ord(character) != 9 and ord(character) != 32:
+                elif (
+                        ord(character) != 10
+                        and ord(character) != 9
+                        and ord(character) != 32
+                ):
                     self.__lexical_info.add_character(character)
                     self._store_token(TokenTypes.INVALID_SYMBOL)
             # Here start all other states
