@@ -8,7 +8,7 @@ class TokenTypes(Enum):
     NUMBER = "NRO"
     DELIMITER = "DEL"
     RELATIONAL_OPERATOR = "REL"
-    LOGIC_OPERATOR = "LOG"
+    LOGICAL_OPERATOR = "LOG"
     ARITHMETIC_OPERATOR = "ART"
     STRING = "CAD"
     # Types for internal use

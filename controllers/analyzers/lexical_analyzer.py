@@ -15,6 +15,7 @@ class LexicalAnalyzer:
         self.__lexical_structure = LexicalStructure()
         self.__tokens = []
         self.__errors_list = []
+        self.__filename = ""
 
     def _store_token(self, token_type: TokenTypes, is_error=False) -> Token:
         new_token = self.__lexical_info.generate_token(token_type)
@@ -87,7 +88,15 @@ class LexicalAnalyzer:
     def __identifier_state(self, character: str, next_character):
         if self.__is_character_identifier(character):
             self.__lexical_info.add_character(character)
-        elif character == " " or character == ";" or character == "\n":
+        elif self.__lexical_structure.is_delimiter(character):
+            self.__lexical_info.state = LexicalStates.NIL
+            if self.__lexical_structure.is_reserved(self.__lexical_info.get_lexeme()):
+                self._store_token(TokenTypes.RESERVED_WORD)
+            else:
+                self._store_token(TokenTypes.IDENTIFIER)
+            self.__lexical_info.add_character(character)
+            self._store_token(TokenTypes.DELIMITER)
+        elif character == " " or character == "\n" or character == "-" or character == "+":
             self.__lexical_info.state = LexicalStates.NIL
             if self.__lexical_structure.is_reserved(self.__lexical_info.get_lexeme()):
                 self._store_token(TokenTypes.RESERVED_WORD)
@@ -95,7 +104,7 @@ class LexicalAnalyzer:
                 self._store_token(TokenTypes.IDENTIFIER)
         else:
             self.__lexical_info.add_character(character)
-            self._store_token(TokenTypes.INVALID_SYMBOL)
+            self._store_token(TokenTypes.INVALID_SYMBOL, True)
 
     def __operator_state(
             self,
@@ -124,7 +133,7 @@ class LexicalAnalyzer:
     def __logical_op_state(self, character: str, previous_character: str):
         self.__operator_state(
             self.__lexical_structure.is_logical,
-            TokenTypes.LOGIC_OPERATOR,
+            TokenTypes.LOGICAL_OPERATOR,
             character,
             previous_character,
         )
@@ -154,19 +163,19 @@ class LexicalAnalyzer:
             #   self.__lexical_info.state
             # )
 
+            # Relational return
+            relational_type = self.__lexical_structure.is_relational(
+                character, next_character
+            )
+            logical_type = self.__lexical_structure.is_logical(
+                character, next_character
+            )
+            arithmetic_type = self.__lexical_structure.is_arithmetic(
+                character, next_character
+            )
+
             if self.__lexical_info.state == LexicalStates.NIL:
                 # Start point, verify first character in lexeme
-
-                # Relational return
-                relational_type = self.__lexical_structure.is_relational(
-                    character, next_character
-                )
-                logical_type = self.__lexical_structure.is_logical(
-                    character, next_character
-                )
-                arithmetic_type = self.__lexical_structure.is_arithmetic(
-                    character, next_character
-                )
 
                 # Top Priorities states
                 if character == "/" and next_character == "*":
@@ -225,7 +234,8 @@ class LexicalAnalyzer:
                         and ord(character) != 32
                 ):
                     self.__lexical_info.add_character(character)
-                    self._store_token(TokenTypes.INVALID_SYMBOL)
+                    self._store_token(TokenTypes.INVALID_SYMBOL, True)
+
             # Here start all other states
             elif self.__lexical_info.state == LexicalStates.BLOCK_COMMENT:
                 self.__block_comment_state(previous_character, str(character))
@@ -235,6 +245,26 @@ class LexicalAnalyzer:
                 self.__number_state(character, next_character)
             elif self.__lexical_info.state == LexicalStates.IDENTIFIER:
                 self.__identifier_state(character, next_character)
+                if relational_type[0]:
+                    self.__lexical_info.add_character(character)
+                    if relational_type[1]:
+                        self.__lexical_info.state = LexicalStates.RELATIONAL_OPERATOR
+                    else:
+                        self._store_token(TokenTypes.RELATIONAL_OPERATOR)
+
+                elif logical_type[0]:
+                    self.__lexical_info.add_character(character)
+                    if logical_type[1]:
+                        self.__lexical_info.state = LexicalStates.LOGICAL_OPERATOR
+                    else:
+                        self._store_token(TokenTypes.LOGICAL_OPERATOR)
+
+                elif arithmetic_type[0]:
+                    self.__lexical_info.add_character(character)
+                    if arithmetic_type[1]:
+                        self.__lexical_info.state = LexicalStates.ARITHMETIC_OPERATOR
+                    else:
+                        self._store_token(TokenTypes.ARITHMETIC_OPERATOR)
             elif self.__lexical_info.state == LexicalStates.LINE_COMMENT:
                 self.__line_comment_state(character)
             elif self.__lexical_info.state == LexicalStates.LOGICAL_OPERATOR:
@@ -246,11 +276,15 @@ class LexicalAnalyzer:
             column += 1
             previous_character = character
 
+        if self.__lexical_info.state == LexicalStates.IDENTIFIER:
+            self._store_token(TokenTypes.IDENTIFIER)
+        elif self.__lexical_info.state == LexicalStates.NUMBER:
+            self._store_token(TokenTypes.NUMBER)
         if self.__lexical_info.state != LexicalStates.NIL:
             if self.__lexical_info.state == LexicalStates.STRING:
-                self._store_token(TokenTypes.MALFORMED_STRING)
+                self._store_token(TokenTypes.MALFORMED_STRING, True)
             if self.__lexical_info.state != LexicalStates.BLOCK_COMMENT:
-                self.__lexical_info.generate_token(TokenTypes.MALFORMED_COMMENT)
+                self._store_token(TokenTypes.MALFORMED_COMMENT, True)
 
     def start(self, file_pointer: BinaryIO):
         line_number = 0
@@ -260,5 +294,15 @@ class LexicalAnalyzer:
             line_number += 1
         if self.__lexical_info.state == LexicalStates.BLOCK_COMMENT:
             self._store_token(TokenTypes.MALFORMED_COMMENT, True)
-        print(self.__tokens)
-        print(self.__errors_list)
+        print(self.__filename.replace(r"./input\entrada", r"./output\saida"))
+        file_pointer = open(self.__filename.replace(r"./input\entrada", r"./output\saida"), 'w')
+
+        file_pointer.write("".join(str(v) for v in self.__tokens))
+        file_pointer.write("\n")
+        file_pointer.write("".join(str(v) for v in self.__errors_list))
+
+        self.__tokens.clear()
+        self.__errors_list.clear()
+
+    def set_filename(self, filename: str):
+        self.__filename = filename

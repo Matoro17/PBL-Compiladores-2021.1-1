@@ -18,6 +18,7 @@ class FileReader:
 
     def start(self, filename: str) -> bool:
         if self.open_file(filename):
+            singletone_lexical.set_filename(filename)
             singletone_lexical.start(self.__file_pointer)
             return True
 
