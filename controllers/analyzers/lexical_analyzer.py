@@ -55,12 +55,6 @@ class LexicalAnalyzer:
     def __number_state(self, character: str, next_character: str) -> None:
         lexeme = self.__lexical_info.get_lexeme()
         # TODO verify if next_character is a end_lexeme
-        if self.__lexical_structure.is_end_lexeme(character) and character != ".":
-            self.__lexical_info.state = LexicalStates.NIL
-            if validators.is_valid_number(lexeme):
-                self._store_token(TokenTypes.NUMBER)
-            else:
-                self._store_token(TokenTypes.MALFORMED_NUMBER, True)
         self.__lexical_info.add_character(character)
         if character.isnumeric():
             if next_character != "." and not next_character.isnumeric():
@@ -185,13 +179,12 @@ class LexicalAnalyzer:
                     self.__lexical_info.state = LexicalStates.STRING
 
                 # Common States
-                elif character == "-" and next_character.isdigit():
+                elif ord("0") <= ord(character) <= ord("9") or (character == "-" and next_character.isdigit()):
                     self.__lexical_info.add_character(character)
-                    self.__lexical_info.state = LexicalStates.NUMBER
-
-                elif ord("0") <= ord(character) <= ord("9"):
-                    self.__lexical_info.add_character(character)
-                    self.__lexical_info.state = LexicalStates.NUMBER
+                    if self.__lexical_structure.is_end_lexeme(next_character) and next_character != ".":
+                        self._store_token(TokenTypes.NUMBER)
+                    else:
+                        self.__lexical_info.state = LexicalStates.NUMBER
 
                 elif ord("A") <= ord(character) <= ord("Z") or ord("a") <= ord(character) <= ord("z"):
                     self.__lexical_info.add_character(character)
