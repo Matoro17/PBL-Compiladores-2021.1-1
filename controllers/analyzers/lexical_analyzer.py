@@ -271,7 +271,14 @@ class LexicalAnalyzer:
             line_number += 1
         if self.__lexical_info.state == LexicalStates.BLOCK_COMMENT:
             self._store_token(TokenTypes.MALFORMED_COMMENT, True)
-        print(self.__filename.replace(r"./input\entrada", r"./output\saida"))
+
+        if not self.__errors_list:
+            print("Sucess! No lexical errors")
+        else:
+            print("Finished! With lexical errors")
+
+
+        #print(self.__filename.replace(r"./input\entrada", r"./output\saida"))
         file_pointer = open(self.__filename.replace(r"./input\entrada", r"./output\saida"), 'w')
 
         file_pointer.write("".join(str(v) for v in self.__tokens))
