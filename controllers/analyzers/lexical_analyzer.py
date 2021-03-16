@@ -54,12 +54,13 @@ class LexicalAnalyzer:
 
     def __number_state(self, character: str, next_character: str) -> None:
         lexeme = self.__lexical_info.get_lexeme()
+        print(lexeme)
         # TODO verify if next_character is a end_lexeme
         self.__lexical_info.add_character(character)
         if character.isnumeric():
             if next_character != "." and not next_character.isnumeric():
                 if (
-                        self.__lexical_structure.is_delimiter(next_character)
+                        self.__lexical_structure.is_end_lexeme(next_character)
                         or next_character.isspace()
                 ):
                     self.__lexical_info.state = LexicalStates.NIL
@@ -70,6 +71,12 @@ class LexicalAnalyzer:
         elif character != "." or next_character.isspace():
             self.__lexical_info.state = LexicalStates.NIL
             self._store_token(TokenTypes.MALFORMED_NUMBER, True)
+        elif character == "." and self.__lexical_structure.is_end_lexeme(next_character):
+            self.__lexical_info.state = LexicalStates.NIL
+            if validators.is_valid_number(lexeme):
+                self._store_token(TokenTypes.NUMBER)
+            else:
+                self._store_token(TokenTypes.MALFORMED_NUMBER, True)
 
     @staticmethod
     def __is_character_identifier(character):
