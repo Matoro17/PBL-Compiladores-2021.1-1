@@ -53,10 +53,9 @@ class LexicalAnalyzer:
             self._store_token(TokenTypes.STRING)
 
     def __number_state(self, character: str, next_character: str) -> None:
-        lexeme = self.__lexical_info.get_lexeme()
-        print(lexeme)
-        # TODO verify if next_character is a end_lexeme
         self.__lexical_info.add_character(character)
+        lexeme = self.__lexical_info.get_lexeme()
+        # TODO verify if next_character is a a invalid symbol
         if character.isnumeric():
             if next_character != "." and not next_character.isnumeric():
                 if (
@@ -151,12 +150,6 @@ class LexicalAnalyzer:
             next_character = ""
             if column + 1 < len(line_data):
                 next_character = line_data[column + 1]
-            # print(
-            #   len(line_data), line_data.replace(" ", "").replace("\n", "\\n"),
-            #   "PRE '%s'" % previous_character,
-            #   "CUR '%s'" % character.replace("\n", "\\n"),
-            #   self.__lexical_info.state
-            # )
 
             # Relational return
             relational_type = self.__lexical_structure.is_relational(
@@ -277,8 +270,6 @@ class LexicalAnalyzer:
         else:
             print("Finished! With lexical errors")
 
-
-        #print(self.__filename.replace(r"./input\entrada", r"./output\saida"))
         file_pointer = open(self.__filename.replace(r"./input\entrada", r"./output\saida"), 'w')
 
         file_pointer.write("".join(str(v) for v in self.__tokens))
