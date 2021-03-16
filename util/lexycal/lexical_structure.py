@@ -60,6 +60,7 @@ class LexicalStructure:
         return (
                 self.is_delimiter(character)
                 or character.isspace()
+                or character == ""
                 or self.is_relational(character)[0]
                 or self.is_logical(character)[0]
                 or self.is_arithmetic(character)[0]

@@ -54,6 +54,7 @@ class LexicalAnalyzer:
 
     def __number_state(self, character: str, next_character: str) -> None:
         lexeme = self.__lexical_info.get_lexeme()
+        # TODO verify if next_character is a end_lexeme
         if self.__lexical_structure.is_end_lexeme(character) and character != ".":
             self.__lexical_info.state = LexicalStates.NIL
             if validators.is_valid_number(lexeme):
@@ -85,26 +86,19 @@ class LexicalAnalyzer:
                 or ord("a") <= ord(character) <= ord("z")
         )
 
-    def __identifier_state(self, character: str, next_character):
+    def __identifier_state(self, character: str, next_character: str):
         if self.__is_character_identifier(character):
             self.__lexical_info.add_character(character)
-        elif self.__lexical_structure.is_delimiter(character):
-            self.__lexical_info.state = LexicalStates.NIL
-            if self.__lexical_structure.is_reserved(self.__lexical_info.get_lexeme()):
-                self._store_token(TokenTypes.RESERVED_WORD)
-            else:
-                self._store_token(TokenTypes.IDENTIFIER)
-            self.__lexical_info.add_character(character)
-            self._store_token(TokenTypes.DELIMITER)
-        elif character == " " or character == "\n" or character == "-" or character == "+":
-            self.__lexical_info.state = LexicalStates.NIL
-            if self.__lexical_structure.is_reserved(self.__lexical_info.get_lexeme()):
-                self._store_token(TokenTypes.RESERVED_WORD)
-            else:
-                self._store_token(TokenTypes.IDENTIFIER)
         else:
             self.__lexical_info.add_character(character)
             self._store_token(TokenTypes.INVALID_SYMBOL, True)
+
+        if self.__lexical_structure.is_end_lexeme(next_character):
+            self.__lexical_info.state = LexicalStates.NIL
+            if self.__lexical_structure.is_reserved(self.__lexical_info.get_lexeme()):
+                self._store_token(TokenTypes.RESERVED_WORD)
+            else:
+                self._store_token(TokenTypes.IDENTIFIER)
 
     def __operator_state(
             self,
@@ -199,9 +193,12 @@ class LexicalAnalyzer:
                     self.__lexical_info.add_character(character)
                     self.__lexical_info.state = LexicalStates.NUMBER
 
-                elif 65 <= ord(character) <= 90 or 97 <= ord(character) <= 122:
+                elif ord("A") <= ord(character) <= ord("Z") or ord("a") <= ord(character) <= ord("z"):
                     self.__lexical_info.add_character(character)
-                    self.__lexical_info.state = LexicalStates.IDENTIFIER
+                    if self.__lexical_structure.is_end_lexeme(next_character):
+                        self._store_token(TokenTypes.IDENTIFIER)
+                    else:
+                        self.__lexical_info.state = LexicalStates.IDENTIFIER
 
                 elif relational_type[0]:
                     self.__lexical_info.add_character(character)
@@ -245,26 +242,6 @@ class LexicalAnalyzer:
                 self.__number_state(character, next_character)
             elif self.__lexical_info.state == LexicalStates.IDENTIFIER:
                 self.__identifier_state(character, next_character)
-                if relational_type[0]:
-                    self.__lexical_info.add_character(character)
-                    if relational_type[1]:
-                        self.__lexical_info.state = LexicalStates.RELATIONAL_OPERATOR
-                    else:
-                        self._store_token(TokenTypes.RELATIONAL_OPERATOR)
-
-                elif logical_type[0]:
-                    self.__lexical_info.add_character(character)
-                    if logical_type[1]:
-                        self.__lexical_info.state = LexicalStates.LOGICAL_OPERATOR
-                    else:
-                        self._store_token(TokenTypes.LOGICAL_OPERATOR)
-
-                elif arithmetic_type[0]:
-                    self.__lexical_info.add_character(character)
-                    if arithmetic_type[1]:
-                        self.__lexical_info.state = LexicalStates.ARITHMETIC_OPERATOR
-                    else:
-                        self._store_token(TokenTypes.ARITHMETIC_OPERATOR)
             elif self.__lexical_info.state == LexicalStates.LINE_COMMENT:
                 self.__line_comment_state(character)
             elif self.__lexical_info.state == LexicalStates.LOGICAL_OPERATOR:
