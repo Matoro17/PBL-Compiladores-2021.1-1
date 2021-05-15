@@ -12,11 +12,10 @@ class Queue:
     def add(self, value) -> None:
         self.__elements.append(value)
 
-    def remove(self) -> bool:
+    def remove(self) -> Token:
         if self.is_not_empty():
             self.__first_index += 1
-            return True
-        return False
+            return self.__elements[self.__first_index - 1]
 
     def peek(self) -> Token:
         if self.is_not_empty():

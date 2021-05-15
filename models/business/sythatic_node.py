@@ -3,11 +3,11 @@ from models.token import Token
 
 class SynthaticNode:
 
-    def __init__(self, token: Token, production: str):
+    def __init__(self, production: str, token):
         self.nodeList = []
-        self.token = token
-        self.empty = token is None
-        self.production = production
+        self.token: Token = token
+        self.empty: bool = token is None
+        self.production: str = production
 
     def add(self, synthatic_node) -> None:
         if not synthatic_node:
@@ -24,6 +24,9 @@ class SynthaticNode:
 
     def is_empty(self) -> bool:
         return self.empty
+
+    def is_not_empty(self) -> bool:
+        return not self.empty
 
     def get_production(self) -> str:
         return self.production

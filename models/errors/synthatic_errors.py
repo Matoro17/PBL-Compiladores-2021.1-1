@@ -3,7 +3,7 @@ from models.token import Token
 
 class SynthaticParseErrors:
 
-    def __init__(self, error: {str}, lexeme: Token):
+    def __init__(self, error: [str], lexeme: Token):
         self.error = error
         self.token = lexeme
 
