@@ -3,7 +3,7 @@ from models.token import Token
 
 class SynthaticNode:
 
-    def __init__(self, production: str, token):
+    def __init__(self, production: str, token: Token = None):
         self.nodeList = []
         self.token: Token = token
         self.empty: bool = token is None

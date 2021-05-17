@@ -7,7 +7,7 @@ class Queue:
         self.__first_index = 0
 
     def is_not_empty(self) -> bool:
-        return len(self.__elements) >= self.__first_index
+        return len(self.__elements) > self.__first_index
 
     def add(self, value) -> None:
         self.__elements.append(value)

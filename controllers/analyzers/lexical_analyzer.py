@@ -2,6 +2,7 @@ from collections.abc import Callable
 from typing import BinaryIO
 
 import util.lexycal.lexical_validators as validators
+from controllers.analyzers.synthatic_analyzer import SynthaticAnalyzer
 from models.lexical_information import LexicalInformation
 from models.token import Token
 from util.lexycal.lexical_states import LexicalStates
@@ -29,20 +30,20 @@ class LexicalAnalyzer:
     def get_errors(self) -> list[str]:
         return self.__errors_list
 
-    def __block_comment_state(self, previous_character: str, character: str):
+    def __block_comment_state(self, previous_character: str, character: str) -> None:
         self.__lexical_info.add_character(character)
         if character == "/" and previous_character == "*":
             self.__lexical_info.state = LexicalStates.NIL
             self._store_token(TokenTypes.BLOCK_COMMENT)
 
-    def __line_comment_state(self, character):
+    def __line_comment_state(self, character) -> None:
         if character == "\n":
             self.__lexical_info.state = LexicalStates.NIL
             self._store_token(TokenTypes.LINE_COMMENT)
         else:
             self.__lexical_info.add_character(character)
 
-    def __string_state(self, previous_character: str, character: str):
+    def __string_state(self, previous_character: str, character: str) -> None:
         self.__lexical_info.add_character(character)
         # TODO Still needs to fix problems like "hello \\"
         if (
@@ -78,7 +79,7 @@ class LexicalAnalyzer:
                 self._store_token(TokenTypes.MALFORMED_NUMBER, True)
 
     @staticmethod
-    def __is_character_identifier(character):
+    def __is_character_identifier(character) -> bool:
         return (
                 ord("0") <= ord(character) <= ord("9")
                 or ord(character) == ord("_")
@@ -86,7 +87,7 @@ class LexicalAnalyzer:
                 or ord("a") <= ord(character) <= ord("z")
         )
 
-    def __identifier_state(self, character: str, next_character: str):
+    def __identifier_state(self, character: str, next_character: str) -> None:
         if self.__is_character_identifier(character):
             self.__lexical_info.add_character(character)
         else:
@@ -116,7 +117,7 @@ class LexicalAnalyzer:
             self.__lexical_info.add_character(character)
         self.__lexical_info.state = LexicalStates.NIL
 
-    def __arithmetic_op_state(self, character: str, previous_character: str):
+    def __arithmetic_op_state(self, character: str, previous_character: str) -> None:
         self.__operator_state(
             self.__lexical_structure.is_arithmetic,
             TokenTypes.ARITHMETIC_OPERATOR,
@@ -124,7 +125,7 @@ class LexicalAnalyzer:
             previous_character,
         )
 
-    def __logical_op_state(self, character: str, previous_character: str):
+    def __logical_op_state(self, character: str, previous_character: str) -> None:
         self.__operator_state(
             self.__lexical_structure.is_logical,
             TokenTypes.LOGICAL_OPERATOR,
@@ -132,7 +133,7 @@ class LexicalAnalyzer:
             previous_character,
         )
 
-    def __relational_op_state(self, character: str, previous_character: str):
+    def __relational_op_state(self, character: str, previous_character: str) -> None:
         self.__operator_state(
             self.__lexical_structure.is_relational,
             TokenTypes.RELATIONAL_OPERATOR,
@@ -140,7 +141,7 @@ class LexicalAnalyzer:
             previous_character,
         )
 
-    def __parse_line(self, line_data: bytes):
+    def __parse_line(self, line_data: bytes) -> None:
         previous_character = ""
         for column in range(0, len(line_data)):
             self.__lexical_info.column = column + 1
@@ -256,7 +257,7 @@ class LexicalAnalyzer:
             if self.__lexical_info.state != LexicalStates.BLOCK_COMMENT:
                 self._store_token(TokenTypes.MALFORMED_COMMENT, True)
 
-    def start(self, file_pointer: BinaryIO):
+    def start(self, file_pointer: BinaryIO) -> None:
         line_number = 0
         for current_line in file_pointer.readlines():
             self.__lexical_info.line_number = line_number + 1
@@ -276,8 +277,9 @@ class LexicalAnalyzer:
         file_pointer.write("\n")
         file_pointer.write("".join(str(v) for v in self.__errors_list))
 
+        SynthaticAnalyzer().start(self.__tokens)
         self.__tokens.clear()
         self.__errors_list.clear()
 
-    def set_filename(self, filename: str):
+    def set_filename(self, filename: str) -> None:
         self.__filename = filename
