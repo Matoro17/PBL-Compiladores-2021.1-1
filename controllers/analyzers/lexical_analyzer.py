@@ -268,9 +268,9 @@ class LexicalAnalyzer:
             self._store_token(TokenTypes.MALFORMED_COMMENT, True)
 
         if not self.__errors_list:
-            print("Sucess! No lexical errors")
+            print("Lexical: Success! No lexical errors")
         else:
-            print("Finished! With lexical errors")
+            print("Lexical: Finished! With lexical errors")
 
         file_pointer = open(input_to_output(self.__filename), 'w')
 
@@ -280,7 +280,10 @@ class LexicalAnalyzer:
 
         temp_synthatic = SynthaticAnalyzer()
         temp_synthatic.start(self.__tokens)
-
+        if not temp_synthatic.get_errors():
+            print("Synthatic: Success! No Synthatic errors")
+        else:
+            print("Synthatic: Finished! With Synthatic errors")
         file_pointer.write("\n".join(str(v) for v in temp_synthatic.get_errors()))
         file_pointer.write("\n")
         self.__tokens.clear()
