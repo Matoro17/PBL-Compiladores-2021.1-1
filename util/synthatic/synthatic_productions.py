@@ -4,6 +4,7 @@ from models.business.sythatic_node import SynthaticNode
 from models.errors.synthatic_errors import SynthaticParseErrors
 from util.data_structure.queue import Queue
 from util.productions import EProduction
+from util.token_types import TokenTypes
 
 productions_functions: dict[
     EProduction, Callable[[Queue, list[SynthaticParseErrors]], SynthaticNode]
@@ -21,38 +22,42 @@ def sp_log_or__(
     """
 
     node = SynthaticNode(production="<Log Or_>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production ['||', <Log And>, <Log Or_>]
-    if token_queue.peek().get_lexeme() == "||":
+    if token_queue.peek() and token_queue.peek().get_lexeme() == "||":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in [
-            "global",
-            "id",
-            "local",
-            "num",
-            "log",
-            "!",
-            "(",
-            "str",
-        ]:
+        # Predicting for production <Log And>
+        local_first_set = ["global", "local", "!", "("]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = (
+                temp_token_type == TokenTypes.IDENTIFIER
+                or temp_token_type == TokenTypes.NUMBER
+                or temp_token_type == TokenTypes.RESERVED_WORD
+                or temp_token_type == TokenTypes.STRING
+        )
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_log_and(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["global", "id", "local", "num", "log", "!", "(", "str"],
-                    token_queue.peek(),
-                )
-            )
-        if token_queue.peek().get_lexeme() in ["||"]:
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+        # Predicting for production <Log Or_>
+        local_first_set = ["||"]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_log_or__(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(SynthaticParseErrors(["||"], token_queue.peek()))
+
     # Predicting for production []
     else:
         return node
+
     return node
 
 
@@ -67,36 +72,37 @@ def sp_params_list(
     """
 
     node = SynthaticNode(production="<Params List>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [',', <Param>, <Params List>]
-    if token_queue.peek().get_lexeme() == ",":
+    if token_queue.peek() and token_queue.peek().get_lexeme() == ",":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in [
-            "id",
-            "boolean",
-            "struct",
-            "int",
-            "string",
-            "real",
-        ]:
+        # Predicting for production <Param>
+        local_first_set = ["boolean", "struct", "int", "string", "real"]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = temp_token_type == TokenTypes.IDENTIFIER
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_param(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["id", "boolean", "struct", "int", "string", "real"],
-                    token_queue.peek(),
-                )
-            )
-        if token_queue.peek().get_lexeme() in [","]:
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+        # Predicting for production <Params List>
+        local_first_set = [","]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_params_list(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(SynthaticParseErrors([","], token_queue.peek()))
+
     # Predicting for production []
     else:
         return node
+
     return node
 
 
@@ -110,40 +116,42 @@ def sp_array_decl(
     """
 
     node = SynthaticNode(production="<Array Decl>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production ['[', <Array Def>, ']', <Array Vector>]
-    if token_queue.peek().get_lexeme() == "[":
+    if token_queue.peek() and token_queue.peek().get_lexeme() == "[":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in [
-            "id",
-            "-",
-            "log",
-            "(",
-            "!",
-            "local",
-            "num",
-            "str",
-            "global",
-        ]:
+        # Predicting for production <Array Def>
+        local_first_set = ["-", "(", "!", "local", "global"]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = (
+                temp_token_type == TokenTypes.IDENTIFIER
+                or temp_token_type == TokenTypes.RESERVED_WORD
+                or temp_token_type == TokenTypes.NUMBER
+                or temp_token_type == TokenTypes.STRING
+        )
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_array_def(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["id", "-", "log", "(", "!", "local", "num", "str", "global"],
-                    token_queue.peek(),
-                )
-            )
-        if token_queue.peek().get_lexeme() == "]":
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+        if token_queue.peek() and token_queue.peek().get_lexeme() == "]":
             node.add(token_queue.remove())
         else:
             error_list.append(SynthaticParseErrors(["]"], token_queue.peek()))
-        if token_queue.peek().get_lexeme() in [","]:
+        # Predicting for production <Array Vector>
+        local_first_set = [","]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_array_vector(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(SynthaticParseErrors([","], token_queue.peek()))
+
     return node
 
 
@@ -158,8 +166,11 @@ def sp_param_type(
     """
 
     node = SynthaticNode(production="<Param Type>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [<Type>]
-    if token_queue.peek().get_lexeme() in [
+    if token_queue.peek() and token_queue.peek().get_lexeme() in [
         "real",
         "boolean",
         "int",
@@ -169,9 +180,14 @@ def sp_param_type(
         temp = sp_type(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
+
     # Predicting for production [id]
-    elif token_queue.peek().get_lexeme() == "id":
+    elif (
+            token_queue.peek()
+            and token_queue.peek().get_token_type() == TokenTypes.IDENTIFIER
+    ):
         node.add(token_queue.remove())
+
     return node
 
 
@@ -183,27 +199,28 @@ def sp_add(token_queue: Queue, error_list: list[SynthaticParseErrors]) -> Syntha
     """
 
     node = SynthaticNode(production="<Add>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [<Mult>, <Add_>]
-    if token_queue.peek().get_lexeme() in [
-        "id",
-        "-",
-        "str",
-        "(",
-        "!",
-        "local",
-        "num",
-        "global",
-        "log",
-    ]:
+    if (
+            token_queue.peek()
+            and token_queue.peek().get_lexeme() in ["-", "(", "!", "local", "global"]
+            or temp_token_type == TokenTypes.IDENTIFIER
+            or temp_token_type == TokenTypes.STRING
+            or temp_token_type == TokenTypes.NUMBER
+            or temp_token_type == TokenTypes.RESERVED_WORD
+    ):
         temp = sp_mult(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
-        if token_queue.peek().get_lexeme() in ["+", "-"]:
+        # Predicting for production <Add_>
+        local_first_set = ["+", "-"]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_add__(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(SynthaticParseErrors(["+", "-"], token_queue.peek()))
+
     return node
 
 
@@ -218,39 +235,42 @@ def sp_args_list(
     """
 
     node = SynthaticNode(production="<Args List>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [',', <Expr>, <Args List>]
-    if token_queue.peek().get_lexeme() == ",":
+    if token_queue.peek() and token_queue.peek().get_lexeme() == ",":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in [
-            "id",
-            "-",
-            "log",
-            "global",
-            "!",
-            "local",
-            "num",
-            "(",
-            "str",
-        ]:
+        # Predicting for production <Expr>
+        local_first_set = ["-", "global", "!", "local", "("]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = (
+                temp_token_type == TokenTypes.IDENTIFIER
+                or temp_token_type == TokenTypes.RESERVED_WORD
+                or temp_token_type == TokenTypes.NUMBER
+                or temp_token_type == TokenTypes.STRING
+        )
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_expr(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["id", "-", "log", "global", "!", "local", "num", "(", "str"],
-                    token_queue.peek(),
-                )
-            )
-        if token_queue.peek().get_lexeme() in [","]:
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+        # Predicting for production <Args List>
+        local_first_set = [","]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_args_list(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(SynthaticParseErrors([","], token_queue.peek()))
+
     # Predicting for production []
     else:
         return node
+
     return node
 
 
@@ -264,27 +284,28 @@ def sp_array_def(
     """
 
     node = SynthaticNode(production="<Array Def>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [<Expr>, <Array Expr>]
-    if token_queue.peek().get_lexeme() in [
-        "id",
-        "-",
-        "log",
-        "global",
-        "!",
-        "local",
-        "num",
-        "(",
-        "str",
-    ]:
+    if (
+            token_queue.peek()
+            and token_queue.peek().get_lexeme() in ["-", "global", "!", "local", "("]
+            or temp_token_type == TokenTypes.IDENTIFIER
+            or temp_token_type == TokenTypes.RESERVED_WORD
+            or temp_token_type == TokenTypes.NUMBER
+            or temp_token_type == TokenTypes.STRING
+    ):
         temp = sp_expr(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
-        if token_queue.peek().get_lexeme() in [","]:
+        # Predicting for production <Array Expr>
+        local_first_set = [","]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_array_expr(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(SynthaticParseErrors([","], token_queue.peek()))
+
     return node
 
 
@@ -299,24 +320,22 @@ def sp_var_decls(
     """
 
     node = SynthaticNode(production="<Var Decls>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [<Var Decl>, <Var Decls>]
-    if token_queue.peek().get_lexeme() in [
-        "typedef",
-        "real",
-        "struct",
-        "string",
-        "global",
-        "local",
-        "id",
-        "boolean",
-        "int",
-    ]:
+    if (
+            token_queue.peek()
+            and token_queue.peek().get_lexeme()
+            in ["typedef", "real", "struct", "string", "global", "local", "boolean", "int"]
+            or temp_token_type == TokenTypes.IDENTIFIER
+    ):
         temp = sp_var_decl(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
-        if token_queue.peek().get_lexeme() in [
+        # Predicting for production <Var Decls>
+        local_first_set = [
             "typedef",
-            "id",
             "boolean",
             "string",
             "global",
@@ -324,30 +343,22 @@ def sp_var_decls(
             "int",
             "real",
             "struct",
-        ]:
+        ]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = temp_token_type == TokenTypes.IDENTIFIER
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_var_decls(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(
-                SynthaticParseErrors(
-                    [
-                        "typedef",
-                        "id",
-                        "boolean",
-                        "string",
-                        "global",
-                        "local",
-                        "int",
-                        "real",
-                        "struct",
-                    ],
-                    token_queue.peek(),
-                )
-            )
+
     # Predicting for production []
     else:
         return node
+
     return node
 
 
@@ -363,69 +374,71 @@ def sp_equate__(
     """
 
     node = SynthaticNode(production="<Equate_>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production ['==', <Compare>, <Equate_>]
-    if token_queue.peek().get_lexeme() == "==":
+    if token_queue.peek() and token_queue.peek().get_lexeme() == "==":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in [
-            "id",
-            "-",
-            "log",
-            "global",
-            "!",
-            "local",
-            "num",
-            "(",
-            "str",
-        ]:
+        # Predicting for production <Compare>
+        local_first_set = ["-", "global", "!", "local", "("]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = (
+                temp_token_type == TokenTypes.IDENTIFIER
+                or temp_token_type == TokenTypes.RESERVED_WORD
+                or temp_token_type == TokenTypes.NUMBER
+                or temp_token_type == TokenTypes.STRING
+        )
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_compare(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["id", "-", "log", "global", "!", "local", "num", "(", "str"],
-                    token_queue.peek(),
-                )
-            )
-        if token_queue.peek().get_lexeme() in ["==", "!="]:
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+        # Predicting for production <Equate_>
+        local_first_set = ["==", "!="]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_equate__(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(SynthaticParseErrors(["==", "!="], token_queue.peek()))
+
     # Predicting for production ['!=', <Compare>, <Equate_>]
-    elif token_queue.peek().get_lexeme() == "!=":
+    elif token_queue.peek() and token_queue.peek().get_lexeme() == "!=":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in [
-            "id",
-            "-",
-            "log",
-            "global",
-            "!",
-            "local",
-            "num",
-            "(",
-            "str",
-        ]:
+        # Predicting for production <Compare>
+        local_first_set = ["-", "global", "!", "local", "("]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = (
+                temp_token_type == TokenTypes.IDENTIFIER
+                or temp_token_type == TokenTypes.RESERVED_WORD
+                or temp_token_type == TokenTypes.NUMBER
+                or temp_token_type == TokenTypes.STRING
+        )
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_compare(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["id", "-", "log", "global", "!", "local", "num", "(", "str"],
-                    token_queue.peek(),
-                )
-            )
-        if token_queue.peek().get_lexeme() in ["==", "!="]:
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+        # Predicting for production <Equate_>
+        local_first_set = ["==", "!="]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_equate__(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(SynthaticParseErrors(["==", "!="], token_queue.peek()))
+
     # Predicting for production []
     else:
         return node
+
     return node
 
 
@@ -440,20 +453,28 @@ def sp_extends(
     """
 
     node = SynthaticNode(production="<Extends>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [extends, struct, id]
-    if token_queue.peek().get_lexeme() == "extends":
+    if token_queue.peek() and token_queue.peek().get_lexeme() == "extends":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() == "struct":
+        if token_queue.peek() and token_queue.peek().get_lexeme() == "struct":
             node.add(token_queue.remove())
         else:
             error_list.append(SynthaticParseErrors(["struct"], token_queue.peek()))
-        if token_queue.peek().get_lexeme() == "id":
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_token_type() == TokenTypes.IDENTIFIER
+        ):
             node.add(token_queue.remove())
         else:
             error_list.append(SynthaticParseErrors(["id"], token_queue.peek()))
+
     # Predicting for production []
     else:
         return node
+
     return node
 
 
@@ -468,24 +489,22 @@ def sp_const_decls(
     """
 
     node = SynthaticNode(production="<Const Decls>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [<Const Decl>, <Const Decls>]
-    if token_queue.peek().get_lexeme() in [
-        "typedef",
-        "real",
-        "struct",
-        "string",
-        "global",
-        "local",
-        "id",
-        "boolean",
-        "int",
-    ]:
+    if (
+            token_queue.peek()
+            and token_queue.peek().get_lexeme()
+            in ["typedef", "real", "struct", "string", "global", "local", "boolean", "int"]
+            or temp_token_type == TokenTypes.IDENTIFIER
+    ):
         temp = sp_const_decl(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
-        if token_queue.peek().get_lexeme() in [
+        # Predicting for production <Const Decls>
+        local_first_set = [
             "typedef",
-            "id",
             "boolean",
             "string",
             "global",
@@ -493,30 +512,22 @@ def sp_const_decls(
             "int",
             "real",
             "struct",
-        ]:
+        ]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = temp_token_type == TokenTypes.IDENTIFIER
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_const_decls(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(
-                SynthaticParseErrors(
-                    [
-                        "typedef",
-                        "id",
-                        "boolean",
-                        "string",
-                        "global",
-                        "local",
-                        "int",
-                        "real",
-                        "struct",
-                    ],
-                    token_queue.peek(),
-                )
-            )
+
     # Predicting for production []
     else:
         return node
+
     return node
 
 
@@ -537,93 +548,117 @@ def sp_value(
     """
 
     node = SynthaticNode(production="<Value>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production ['-', <Value>]
-    if token_queue.peek().get_lexeme() == "-":
+    if token_queue.peek() and token_queue.peek().get_lexeme() == "-":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in [
-            "global",
-            "id",
-            "-",
-            "num",
-            "log",
-            "(",
-            "local",
-            "str",
-        ]:
+        # Predicting for production <Value>
+        local_first_set = ["global", "-", "(", "local"]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = (
+                temp_token_type == TokenTypes.IDENTIFIER
+                or temp_token_type == TokenTypes.NUMBER
+                or temp_token_type == TokenTypes.RESERVED_WORD
+                or temp_token_type == TokenTypes.STRING
+        )
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_value(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["global", "id", "-", "num", "log", "(", "local", "str"],
-                    token_queue.peek(),
-                )
-            )
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+
     # Predicting for production [num]
-    elif token_queue.peek().get_lexeme() == "num":
+    elif (
+            token_queue.peek() and token_queue.peek().get_token_type() == TokenTypes.NUMBER
+    ):
         node.add(token_queue.remove())
+
     # Predicting for production [str]
-    elif token_queue.peek().get_lexeme() == "str":
+    elif (
+            token_queue.peek() and token_queue.peek().get_token_type() == TokenTypes.STRING
+    ):
         node.add(token_queue.remove())
+
     # Predicting for production [log]
-    elif token_queue.peek().get_lexeme() == "log":
+    elif (
+            token_queue.peek()
+            and token_queue.peek().get_token_type() == TokenTypes.RESERVED_WORD
+    ):
         node.add(token_queue.remove())
+
     # Predicting for production [local, <Access>]
-    elif token_queue.peek().get_lexeme() == "local":
+    elif token_queue.peek() and token_queue.peek().get_lexeme() == "local":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in ["."]:
+        # Predicting for production <Access>
+        local_first_set = ["."]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_access(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(SynthaticParseErrors(["."], token_queue.peek()))
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+
     # Predicting for production [global, <Access>]
-    elif token_queue.peek().get_lexeme() == "global":
+    elif token_queue.peek() and token_queue.peek().get_lexeme() == "global":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in ["."]:
+        # Predicting for production <Access>
+        local_first_set = ["."]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_access(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(SynthaticParseErrors(["."], token_queue.peek()))
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+
     # Predicting for production [id, <Id Value>]
-    elif token_queue.peek().get_lexeme() == "id":
+    elif (
+            token_queue.peek()
+            and token_queue.peek().get_token_type() == TokenTypes.IDENTIFIER
+    ):
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in ["[", "("]:
+        # Predicting for production <Id Value>
+        local_first_set = ["[", "("]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_id_value(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(SynthaticParseErrors(["[", "("], token_queue.peek()))
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+
     # Predicting for production ['(', <Expr>, ')']
-    elif token_queue.peek().get_lexeme() == "(":
+    elif token_queue.peek() and token_queue.peek().get_lexeme() == "(":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in [
-            "id",
-            "-",
-            "log",
-            "global",
-            "!",
-            "local",
-            "num",
-            "(",
-            "str",
-        ]:
+        # Predicting for production <Expr>
+        local_first_set = ["-", "global", "!", "local", "("]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = (
+                temp_token_type == TokenTypes.IDENTIFIER
+                or temp_token_type == TokenTypes.RESERVED_WORD
+                or temp_token_type == TokenTypes.NUMBER
+                or temp_token_type == TokenTypes.STRING
+        )
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_expr(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["id", "-", "log", "global", "!", "local", "num", "(", "str"],
-                    token_queue.peek(),
-                )
-            )
-        if token_queue.peek().get_lexeme() == ")":
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+        if token_queue.peek() and token_queue.peek().get_lexeme() == ")":
             node.add(token_queue.remove())
         else:
             error_list.append(SynthaticParseErrors([")"], token_queue.peek()))
+
     return node
 
 
@@ -638,42 +673,45 @@ def sp_log_unary(
     """
 
     node = SynthaticNode(production="<Log Unary>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production ['!', <Log Unary>]
-    if token_queue.peek().get_lexeme() == "!":
+    if token_queue.peek() and token_queue.peek().get_lexeme() == "!":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in [
-            "global",
-            "id",
-            "local",
-            "num",
-            "log",
-            "str",
-            "(",
-            "!",
-        ]:
+        # Predicting for production <Log Unary>
+        local_first_set = ["global", "local", "(", "!"]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = (
+                temp_token_type == TokenTypes.IDENTIFIER
+                or temp_token_type == TokenTypes.NUMBER
+                or temp_token_type == TokenTypes.RESERVED_WORD
+                or temp_token_type == TokenTypes.STRING
+        )
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_log_unary(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["global", "id", "local", "num", "log", "str", "(", "!"],
-                    token_queue.peek(),
-                )
-            )
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+
     # Predicting for production [<Log Value>]
-    elif token_queue.peek().get_lexeme() in [
-        "global",
-        "id",
-        "local",
-        "num",
-        "log",
-        "(",
-        "str",
-    ]:
+    elif (
+            token_queue.peek()
+            and token_queue.peek().get_lexeme() in ["global", "local", "("]
+            or temp_token_type == TokenTypes.IDENTIFIER
+            or temp_token_type == TokenTypes.NUMBER
+            or temp_token_type == TokenTypes.RESERVED_WORD
+            or temp_token_type == TokenTypes.STRING
+    ):
         temp = sp_log_value(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
+
     return node
 
 
@@ -688,8 +726,11 @@ def sp_decls(
     """
 
     node = SynthaticNode(production="<Decls>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [<Decl>, <Decls>]
-    if token_queue.peek().get_lexeme() in [
+    if token_queue.peek() and token_queue.peek().get_lexeme() in [
         "typedef",
         "function",
         "struct",
@@ -698,24 +739,17 @@ def sp_decls(
         temp = sp_decl(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
-        if token_queue.peek().get_lexeme() in [
-            "typedef",
-            "struct",
-            "function",
-            "procedure",
-        ]:
+        # Predicting for production <Decls>
+        local_first_set = ["typedef", "struct", "function", "procedure"]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_decls(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["typedef", "struct", "function", "procedure"], token_queue.peek()
-                )
-            )
+
     # Predicting for production []
     else:
         return node
+
     return node
 
 
@@ -730,24 +764,26 @@ def sp_index(
     """
 
     node = SynthaticNode(production="<Index>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [<Expr>]
-    if token_queue.peek().get_lexeme() in [
-        "id",
-        "-",
-        "log",
-        "global",
-        "!",
-        "local",
-        "num",
-        "(",
-        "str",
-    ]:
+    if (
+            token_queue.peek()
+            and token_queue.peek().get_lexeme() in ["-", "global", "!", "local", "("]
+            or temp_token_type == TokenTypes.IDENTIFIER
+            or temp_token_type == TokenTypes.RESERVED_WORD
+            or temp_token_type == TokenTypes.NUMBER
+            or temp_token_type == TokenTypes.STRING
+    ):
         temp = sp_expr(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
+
     # Predicting for production []
     else:
         return node
+
     return node
 
 
@@ -762,39 +798,42 @@ def sp_and__(
     """
 
     node = SynthaticNode(production="<And_>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production ['&&', <Equate>, <And_>]
-    if token_queue.peek().get_lexeme() == "&&":
+    if token_queue.peek() and token_queue.peek().get_lexeme() == "&&":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in [
-            "id",
-            "-",
-            "log",
-            "(",
-            "!",
-            "local",
-            "num",
-            "str",
-            "global",
-        ]:
+        # Predicting for production <Equate>
+        local_first_set = ["-", "(", "!", "local", "global"]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = (
+                temp_token_type == TokenTypes.IDENTIFIER
+                or temp_token_type == TokenTypes.RESERVED_WORD
+                or temp_token_type == TokenTypes.NUMBER
+                or temp_token_type == TokenTypes.STRING
+        )
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_equate(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["id", "-", "log", "(", "!", "local", "num", "str", "global"],
-                    token_queue.peek(),
-                )
-            )
-        if token_queue.peek().get_lexeme() in ["&&"]:
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+        # Predicting for production <And_>
+        local_first_set = ["&&"]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_and__(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(SynthaticParseErrors(["&&"], token_queue.peek()))
+
     # Predicting for production []
     else:
         return node
+
     return node
 
 
@@ -811,8 +850,11 @@ def sp_const_decl(
     """
 
     node = SynthaticNode(production="<Const Decl>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [<Type>, <Const>, <Const List>]
-    if token_queue.peek().get_lexeme() in [
+    if token_queue.peek() and token_queue.peek().get_lexeme() in [
         "real",
         "boolean",
         "int",
@@ -822,41 +864,62 @@ def sp_const_decl(
         temp = sp_type(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
-        if token_queue.peek().get_lexeme() in ["id"]:
+        # Predicting for production <Const>
+        local_first_set = []
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = temp_token_type == TokenTypes.IDENTIFIER
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_const(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(SynthaticParseErrors(["id"], token_queue.peek()))
-        if token_queue.peek().get_lexeme() in ["=", ","]:
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+        # Predicting for production <Const List>
+        local_first_set = ["=", ","]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_const_list(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(SynthaticParseErrors(["=", ","], token_queue.peek()))
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+
     # Predicting for production [<Typedef>]
-    elif token_queue.peek().get_lexeme() in ["typedef"]:
+    elif token_queue.peek() and token_queue.peek().get_lexeme() in ["typedef"]:
         temp = sp_typedef(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
+
     # Predicting for production [<Stm Scope>]
-    elif token_queue.peek().get_lexeme() in ["local", "global"]:
+    elif token_queue.peek() and token_queue.peek().get_lexeme() in ["local", "global"]:
         temp = sp_stm_scope(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
+
     # Predicting for production [id, <Const Id>]
-    elif token_queue.peek().get_lexeme() == "id":
+    elif (
+            token_queue.peek()
+            and token_queue.peek().get_token_type() == TokenTypes.IDENTIFIER
+    ):
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in ["(", "--", ".", "[", "++", "=", "id"]:
+        # Predicting for production <Const Id>
+        local_first_set = ["(", "--", ".", "[", "++", "="]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = temp_token_type == TokenTypes.IDENTIFIER
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_const_id(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["(", "--", ".", "[", "++", "=", "id"], token_queue.peek()
-                )
-            )
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+
     return node
 
 
@@ -871,20 +934,25 @@ def sp_accesses(
     """
 
     node = SynthaticNode(production="<Accesses>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [<Access>, <Accesses>]
-    if token_queue.peek().get_lexeme() in ["."]:
+    if token_queue.peek() and token_queue.peek().get_lexeme() in ["."]:
         temp = sp_access(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
-        if token_queue.peek().get_lexeme() in ["."]:
+        # Predicting for production <Accesses>
+        local_first_set = ["."]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_accesses(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(SynthaticParseErrors(["."], token_queue.peek()))
+
     # Predicting for production []
     else:
         return node
+
     return node
 
 
@@ -898,28 +966,33 @@ def sp_param(
     """
 
     node = SynthaticNode(production="<Param>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [<Param Type>, id, <Param Arrays>]
-    if token_queue.peek().get_lexeme() in [
-        "real",
-        "boolean",
-        "id",
-        "int",
-        "string",
-        "struct",
-    ]:
+    if (
+            token_queue.peek()
+            and token_queue.peek().get_lexeme()
+            in ["real", "boolean", "int", "string", "struct"]
+            or temp_token_type == TokenTypes.IDENTIFIER
+    ):
         temp = sp_param_type(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
-        if token_queue.peek().get_lexeme() == "id":
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_token_type() == TokenTypes.IDENTIFIER
+        ):
             node.add(token_queue.remove())
         else:
             error_list.append(SynthaticParseErrors(["id"], token_queue.peek()))
-        if token_queue.peek().get_lexeme() in ["["]:
+        # Predicting for production <Param Arrays>
+        local_first_set = ["["]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_param_arrays(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(SynthaticParseErrors(["["], token_queue.peek()))
+
     return node
 
 
@@ -931,15 +1004,22 @@ def sp_var(token_queue: Queue, error_list: list[SynthaticParseErrors]) -> Syntha
     """
 
     node = SynthaticNode(production="<Var>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [id, <Arrays>]
-    if token_queue.peek().get_lexeme() == "id":
+    if (
+            token_queue.peek()
+            and token_queue.peek().get_token_type() == TokenTypes.IDENTIFIER
+    ):
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in ["["]:
+        # Predicting for production <Arrays>
+        local_first_set = ["["]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_arrays(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(SynthaticParseErrors(["["], token_queue.peek()))
+
     return node
 
 
@@ -953,42 +1033,27 @@ def sp_func_block(
     """
 
     node = SynthaticNode(production="<Func Block>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [<Var Block>, <Func Stms>]
-    if token_queue.peek().get_lexeme() in ["var"]:
+    if token_queue.peek() and token_queue.peek().get_lexeme() in ["var"]:
         temp = sp_var_block(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
-        if token_queue.peek().get_lexeme() in [
-            "read",
-            "id",
-            "return",
-            "{",
-            "print",
-            "global",
-            "local",
-            "if",
-            "while",
-        ]:
-            temp = sp_func_stms(token_queue, error_list)
-            if temp and temp.is_not_empty():
-                node.add(temp)
-        else:
-            error_list.append(
-                SynthaticParseErrors(
-                    [
-                        "read",
-                        "id",
-                        "return",
-                        "{",
-                        "print",
-                        "global",
-                        "local",
-                        "if",
-                        "while",
-                    ],
-                    token_queue.peek(),
-                )
-            )
+    # Predicting for production <Func Stms>
+    local_first_set = ["read", "return", "{", "print", "global", "local", "if", "while"]
+    temp_token_type = token_queue.peek().get_token_type()
+    token_verification = temp_token_type == TokenTypes.IDENTIFIER
+    if (
+            token_queue.peek()
+            and token_queue.peek().get_lexeme() in local_first_set
+            or token_verification
+    ):
+        temp = sp_func_stms(token_queue, error_list)
+        if temp and temp.is_not_empty():
+            node.add(temp)
+
     return node
 
 
@@ -998,35 +1063,41 @@ def sp_start_block(
     """
     This function parse tokens for production <Start Block>\n
     Accepted productions below\n
-    [start, '(', ')', '[', <Func Block>, ']']\n
+    [start, '(', ')', '{', <Func Block>, '}']\n
     """
 
     node = SynthaticNode(production="<Start Block>")
-    # Predicting for production [start, '(', ')', '[', <Func Block>, ']']
-    if token_queue.peek().get_lexeme() == "start":
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
+    # Predicting for production [start, '(', ')', '{', <Func Block>, '}']
+    if token_queue.peek() and token_queue.peek().get_lexeme() == "start":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() == "(":
+        if token_queue.peek() and token_queue.peek().get_lexeme() == "(":
             node.add(token_queue.remove())
         else:
             error_list.append(SynthaticParseErrors(["("], token_queue.peek()))
-        if token_queue.peek().get_lexeme() == ")":
+        if token_queue.peek() and token_queue.peek().get_lexeme() == ")":
             node.add(token_queue.remove())
         else:
             error_list.append(SynthaticParseErrors([")"], token_queue.peek()))
-        if token_queue.peek().get_lexeme() == "[":
+        if token_queue.peek() and token_queue.peek().get_lexeme() == "{":
             node.add(token_queue.remove())
         else:
-            error_list.append(SynthaticParseErrors(["["], token_queue.peek()))
-        if token_queue.peek().get_lexeme() in ["var"]:
+            error_list.append(SynthaticParseErrors(["{"], token_queue.peek()))
+        # Predicting for production <Func Block>
+        local_first_set = ["var"]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_func_block(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(SynthaticParseErrors(["var"], token_queue.peek()))
-        if token_queue.peek().get_lexeme() == "]":
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+        if token_queue.peek() and token_queue.peek().get_lexeme() == "}":
             node.add(token_queue.remove())
         else:
-            error_list.append(SynthaticParseErrors(["]"], token_queue.peek()))
+            error_list.append(SynthaticParseErrors(["}"], token_queue.peek()))
+
     return node
 
 
@@ -1041,24 +1112,22 @@ def sp_func_stms(
     """
 
     node = SynthaticNode(production="<Func Stms>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [<Func Stm>, <Func Stms>]
-    if token_queue.peek().get_lexeme() in [
-        "read",
-        "while",
-        "return",
-        "{",
-        "print",
-        "global",
-        "local",
-        "id",
-        "if",
-    ]:
+    if (
+            token_queue.peek()
+            and token_queue.peek().get_lexeme()
+            in ["read", "while", "return", "{", "print", "global", "local", "if"]
+            or temp_token_type == TokenTypes.IDENTIFIER
+    ):
         temp = sp_func_stm(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
-        if token_queue.peek().get_lexeme() in [
+        # Predicting for production <Func Stms>
+        local_first_set = [
             "read",
-            "id",
             "return",
             "{",
             "print",
@@ -1066,30 +1135,22 @@ def sp_func_stms(
             "local",
             "if",
             "while",
-        ]:
+        ]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = temp_token_type == TokenTypes.IDENTIFIER
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_func_stms(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(
-                SynthaticParseErrors(
-                    [
-                        "read",
-                        "id",
-                        "return",
-                        "{",
-                        "print",
-                        "global",
-                        "local",
-                        "if",
-                        "while",
-                    ],
-                    token_queue.peek(),
-                )
-            )
+
     # Predicting for production []
     else:
         return node
+
     return node
 
 
@@ -1099,31 +1160,37 @@ def sp_struct_block(
     """
     This function parse tokens for production <Struct Block>\n
     Accepted productions below\n
-    [struct, id, <Extends>, '[', <Var Decls>, ']']\n
-    [typedef, struct, <Extends>, '[', <Var Decls>, ']', id, ';']\n
+    [struct, id, <Extends>, '{', <Var Decls>, '}']\n
+    [typedef, struct, <Extends>, '{', <Var Decls>, '}', id, ';']\n
     """
 
     node = SynthaticNode(production="<Struct Block>")
-    # Predicting for production [struct, id, <Extends>, '[', <Var Decls>, ']']
-    if token_queue.peek().get_lexeme() == "struct":
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
+    # Predicting for production [struct, id, <Extends>, '{', <Var Decls>, '}']
+    if token_queue.peek() and token_queue.peek().get_lexeme() == "struct":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() == "id":
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_token_type() == TokenTypes.IDENTIFIER
+        ):
             node.add(token_queue.remove())
         else:
             error_list.append(SynthaticParseErrors(["id"], token_queue.peek()))
-        if token_queue.peek().get_lexeme() in ["extends"]:
+        # Predicting for production <Extends>
+        local_first_set = ["extends"]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_extends(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(SynthaticParseErrors(["extends"], token_queue.peek()))
-        if token_queue.peek().get_lexeme() == "[":
+        if token_queue.peek() and token_queue.peek().get_lexeme() == "{":
             node.add(token_queue.remove())
         else:
-            error_list.append(SynthaticParseErrors(["["], token_queue.peek()))
-        if token_queue.peek().get_lexeme() in [
+            error_list.append(SynthaticParseErrors(["{"], token_queue.peek()))
+        # Predicting for production <Var Decls>
+        local_first_set = [
             "typedef",
-            "id",
             "boolean",
             "string",
             "global",
@@ -1131,51 +1198,42 @@ def sp_struct_block(
             "int",
             "real",
             "struct",
-        ]:
+        ]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = temp_token_type == TokenTypes.IDENTIFIER
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_var_decls(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(
-                SynthaticParseErrors(
-                    [
-                        "typedef",
-                        "id",
-                        "boolean",
-                        "string",
-                        "global",
-                        "local",
-                        "int",
-                        "real",
-                        "struct",
-                    ],
-                    token_queue.peek(),
-                )
-            )
-        if token_queue.peek().get_lexeme() == "]":
+        if token_queue.peek() and token_queue.peek().get_lexeme() == "}":
             node.add(token_queue.remove())
         else:
-            error_list.append(SynthaticParseErrors(["]"], token_queue.peek()))
-    # Predicting for production [typedef, struct, <Extends>, '[', <Var Decls>, ']', id, ';']
-    elif token_queue.peek().get_lexeme() == "typedef":
+            error_list.append(SynthaticParseErrors(["}"], token_queue.peek()))
+
+    # Predicting for production [typedef, struct, <Extends>, '{', <Var Decls>, '}', id, ';']
+    elif token_queue.peek() and token_queue.peek().get_lexeme() == "typedef":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() == "struct":
+        if token_queue.peek() and token_queue.peek().get_lexeme() == "struct":
             node.add(token_queue.remove())
         else:
             error_list.append(SynthaticParseErrors(["struct"], token_queue.peek()))
-        if token_queue.peek().get_lexeme() in ["extends"]:
+        # Predicting for production <Extends>
+        local_first_set = ["extends"]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_extends(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(SynthaticParseErrors(["extends"], token_queue.peek()))
-        if token_queue.peek().get_lexeme() == "[":
+        if token_queue.peek() and token_queue.peek().get_lexeme() == "{":
             node.add(token_queue.remove())
         else:
-            error_list.append(SynthaticParseErrors(["["], token_queue.peek()))
-        if token_queue.peek().get_lexeme() in [
+            error_list.append(SynthaticParseErrors(["{"], token_queue.peek()))
+        # Predicting for production <Var Decls>
+        local_first_set = [
             "typedef",
-            "id",
             "boolean",
             "string",
             "global",
@@ -1183,39 +1241,33 @@ def sp_struct_block(
             "int",
             "real",
             "struct",
-        ]:
+        ]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = temp_token_type == TokenTypes.IDENTIFIER
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_var_decls(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(
-                SynthaticParseErrors(
-                    [
-                        "typedef",
-                        "id",
-                        "boolean",
-                        "string",
-                        "global",
-                        "local",
-                        "int",
-                        "real",
-                        "struct",
-                    ],
-                    token_queue.peek(),
-                )
-            )
-        if token_queue.peek().get_lexeme() == "]":
+        if token_queue.peek() and token_queue.peek().get_lexeme() == "}":
             node.add(token_queue.remove())
         else:
-            error_list.append(SynthaticParseErrors(["]"], token_queue.peek()))
-        if token_queue.peek().get_lexeme() == "id":
+            error_list.append(SynthaticParseErrors(["}"], token_queue.peek()))
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_token_type() == TokenTypes.IDENTIFIER
+        ):
             node.add(token_queue.remove())
         else:
             error_list.append(SynthaticParseErrors(["id"], token_queue.peek()))
-        if token_queue.peek().get_lexeme() == ";":
+        if token_queue.peek() and token_queue.peek().get_lexeme() == ";":
             node.add(token_queue.remove())
         else:
             error_list.append(SynthaticParseErrors([";"], token_queue.peek()))
+
     return node
 
 
@@ -1232,87 +1284,90 @@ def sp_stm_id(
     """
 
     node = SynthaticNode(production="<Stm Id>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [<Assign>]
-    if token_queue.peek().get_lexeme() in ["++", "--", "="]:
+    if token_queue.peek() and token_queue.peek().get_lexeme() in ["++", "--", "="]:
         temp = sp_assign(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
+
     # Predicting for production [<Array>, <Arrays>, <Accesses>, <Assign>]
-    elif token_queue.peek().get_lexeme() in ["["]:
+    elif token_queue.peek() and token_queue.peek().get_lexeme() in ["["]:
         temp = sp_array(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
-        if token_queue.peek().get_lexeme() in ["["]:
+        # Predicting for production <Arrays>
+        local_first_set = ["["]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_arrays(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(SynthaticParseErrors(["["], token_queue.peek()))
-        if token_queue.peek().get_lexeme() in ["."]:
+        # Predicting for production <Accesses>
+        local_first_set = ["."]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_accesses(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(SynthaticParseErrors(["."], token_queue.peek()))
-        if token_queue.peek().get_lexeme() in ["++", "--", "="]:
+        # Predicting for production <Assign>
+        local_first_set = ["++", "--", "="]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_assign(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(
-                SynthaticParseErrors(["++", "--", "="], token_queue.peek())
-            )
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+
     # Predicting for production [<Access>, <Accesses>, <Assign>]
-    elif token_queue.peek().get_lexeme() in ["."]:
+    elif token_queue.peek() and token_queue.peek().get_lexeme() in ["."]:
         temp = sp_access(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
-        if token_queue.peek().get_lexeme() in ["."]:
+        # Predicting for production <Accesses>
+        local_first_set = ["."]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_accesses(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(SynthaticParseErrors(["."], token_queue.peek()))
-        if token_queue.peek().get_lexeme() in ["++", "--", "="]:
+        # Predicting for production <Assign>
+        local_first_set = ["++", "--", "="]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_assign(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(
-                SynthaticParseErrors(["++", "--", "="], token_queue.peek())
-            )
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+
     # Predicting for production ['(', <Args>, ')', ';']
-    elif token_queue.peek().get_lexeme() == "(":
+    elif token_queue.peek() and token_queue.peek().get_lexeme() == "(":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in [
-            "id",
-            "-",
-            "log",
-            "(",
-            "!",
-            "local",
-            "num",
-            "str",
-            "global",
-        ]:
+        # Predicting for production <Args>
+        local_first_set = ["-", "(", "!", "local", "global"]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = (
+                temp_token_type == TokenTypes.IDENTIFIER
+                or temp_token_type == TokenTypes.RESERVED_WORD
+                or temp_token_type == TokenTypes.NUMBER
+                or temp_token_type == TokenTypes.STRING
+        )
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_args(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["id", "-", "log", "(", "!", "local", "num", "str", "global"],
-                    token_queue.peek(),
-                )
-            )
-        if token_queue.peek().get_lexeme() == ")":
+        if token_queue.peek() and token_queue.peek().get_lexeme() == ")":
             node.add(token_queue.remove())
         else:
             error_list.append(SynthaticParseErrors([")"], token_queue.peek()))
-        if token_queue.peek().get_lexeme() == ";":
+        if token_queue.peek() and token_queue.peek().get_lexeme() == ";":
             node.add(token_queue.remove())
         else:
             error_list.append(SynthaticParseErrors([";"], token_queue.peek()))
+
     return node
 
 
@@ -1326,34 +1381,34 @@ def sp_array(
     """
 
     node = SynthaticNode(production="<Array>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production ['[', <Index>, ']']
-    if token_queue.peek().get_lexeme() == "[":
+    if token_queue.peek() and token_queue.peek().get_lexeme() == "[":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in [
-            "id",
-            "-",
-            "log",
-            "(",
-            "!",
-            "local",
-            "num",
-            "str",
-            "global",
-        ]:
+        # Predicting for production <Index>
+        local_first_set = ["-", "(", "!", "local", "global"]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = (
+                temp_token_type == TokenTypes.IDENTIFIER
+                or temp_token_type == TokenTypes.RESERVED_WORD
+                or temp_token_type == TokenTypes.NUMBER
+                or temp_token_type == TokenTypes.STRING
+        )
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_index(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["id", "-", "log", "(", "!", "local", "num", "str", "global"],
-                    token_queue.peek(),
-                )
-            )
-        if token_queue.peek().get_lexeme() == "]":
+        if token_queue.peek() and token_queue.peek().get_lexeme() == "]":
             node.add(token_queue.remove())
         else:
             error_list.append(SynthaticParseErrors(["]"], token_queue.peek()))
+
     return node
 
 
@@ -1369,21 +1424,30 @@ def sp_decl(
     """
 
     node = SynthaticNode(production="<Decl>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [<Func Decl>]
-    if token_queue.peek().get_lexeme() in ["function"]:
+    if token_queue.peek() and token_queue.peek().get_lexeme() in ["function"]:
         temp = sp_func_decl(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
+
     # Predicting for production [<Proc Decl>]
-    elif token_queue.peek().get_lexeme() in ["procedure"]:
+    elif token_queue.peek() and token_queue.peek().get_lexeme() in ["procedure"]:
         temp = sp_proc_decl(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
+
     # Predicting for production [<Struct Block>]
-    elif token_queue.peek().get_lexeme() in ["typedef", "struct"]:
+    elif token_queue.peek() and token_queue.peek().get_lexeme() in [
+        "typedef",
+        "struct",
+    ]:
         temp = sp_struct_block(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
+
     return node
 
 
@@ -1393,21 +1457,24 @@ def sp_var_block(
     """
     This function parse tokens for production <Var Block>\n
     Accepted productions below\n
-    [var, '[', <Var Decls>, ']']\n
+    [var, '{', <Var Decls>, '}']\n
     []\n
     """
 
     node = SynthaticNode(production="<Var Block>")
-    # Predicting for production [var, '[', <Var Decls>, ']']
-    if token_queue.peek().get_lexeme() == "var":
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
+    # Predicting for production [var, '{', <Var Decls>, '}']
+    if token_queue.peek() and token_queue.peek().get_lexeme() == "var":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() == "[":
+        if token_queue.peek() and token_queue.peek().get_lexeme() == "{":
             node.add(token_queue.remove())
         else:
-            error_list.append(SynthaticParseErrors(["["], token_queue.peek()))
-        if token_queue.peek().get_lexeme() in [
+            error_list.append(SynthaticParseErrors(["{"], token_queue.peek()))
+        # Predicting for production <Var Decls>
+        local_first_set = [
             "typedef",
-            "id",
             "boolean",
             "string",
             "global",
@@ -1415,34 +1482,26 @@ def sp_var_block(
             "int",
             "real",
             "struct",
-        ]:
+        ]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = temp_token_type == TokenTypes.IDENTIFIER
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_var_decls(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(
-                SynthaticParseErrors(
-                    [
-                        "typedef",
-                        "id",
-                        "boolean",
-                        "string",
-                        "global",
-                        "local",
-                        "int",
-                        "real",
-                        "struct",
-                    ],
-                    token_queue.peek(),
-                )
-            )
-        if token_queue.peek().get_lexeme() == "]":
+        if token_queue.peek() and token_queue.peek().get_lexeme() == "}":
             node.add(token_queue.remove())
         else:
-            error_list.append(SynthaticParseErrors(["]"], token_queue.peek()))
+            error_list.append(SynthaticParseErrors(["}"], token_queue.peek()))
+
     # Predicting for production []
     else:
         return node
+
     return node
 
 
@@ -1457,33 +1516,36 @@ def sp_array_expr(
     """
 
     node = SynthaticNode(production="<Array Expr>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [',', <Array Def>]
-    if token_queue.peek().get_lexeme() == ",":
+    if token_queue.peek() and token_queue.peek().get_lexeme() == ",":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in [
-            "id",
-            "-",
-            "log",
-            "(",
-            "!",
-            "local",
-            "num",
-            "str",
-            "global",
-        ]:
+        # Predicting for production <Array Def>
+        local_first_set = ["-", "(", "!", "local", "global"]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = (
+                temp_token_type == TokenTypes.IDENTIFIER
+                or temp_token_type == TokenTypes.RESERVED_WORD
+                or temp_token_type == TokenTypes.NUMBER
+                or temp_token_type == TokenTypes.STRING
+        )
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_array_def(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["id", "-", "log", "(", "!", "local", "num", "str", "global"],
-                    token_queue.peek(),
-                )
-            )
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+
     # Predicting for production []
     else:
         return node
+
     return node
 
 
@@ -1498,20 +1560,25 @@ def sp_arrays(
     """
 
     node = SynthaticNode(production="<Arrays>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [<Array>, <Arrays>]
-    if token_queue.peek().get_lexeme() in ["["]:
+    if token_queue.peek() and token_queue.peek().get_lexeme() in ["["]:
         temp = sp_array(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
-        if token_queue.peek().get_lexeme() in ["["]:
+        # Predicting for production <Arrays>
+        local_first_set = ["["]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_arrays(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(SynthaticParseErrors(["["], token_queue.peek()))
+
     # Predicting for production []
     else:
         return node
+
     return node
 
 
@@ -1525,19 +1592,26 @@ def sp_access(
     """
 
     node = SynthaticNode(production="<Access>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production ['.', id, <Arrays>]
-    if token_queue.peek().get_lexeme() == ".":
+    if token_queue.peek() and token_queue.peek().get_lexeme() == ".":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() == "id":
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_token_type() == TokenTypes.IDENTIFIER
+        ):
             node.add(token_queue.remove())
         else:
             error_list.append(SynthaticParseErrors(["id"], token_queue.peek()))
-        if token_queue.peek().get_lexeme() in ["["]:
+        # Predicting for production <Arrays>
+        local_first_set = ["["]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_arrays(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(SynthaticParseErrors(["["], token_queue.peek()))
+
     return node
 
 
@@ -1552,78 +1626,75 @@ def sp_stm_cmd(
     """
 
     node = SynthaticNode(production="<Stm Cmd>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [print, '(', <Args>, ')', ';']
-    if token_queue.peek().get_lexeme() == "print":
+    if token_queue.peek() and token_queue.peek().get_lexeme() == "print":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() == "(":
+        if token_queue.peek() and token_queue.peek().get_lexeme() == "(":
             node.add(token_queue.remove())
         else:
             error_list.append(SynthaticParseErrors(["("], token_queue.peek()))
-        if token_queue.peek().get_lexeme() in [
-            "id",
-            "-",
-            "log",
-            "(",
-            "!",
-            "local",
-            "num",
-            "str",
-            "global",
-        ]:
+        # Predicting for production <Args>
+        local_first_set = ["-", "(", "!", "local", "global"]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = (
+                temp_token_type == TokenTypes.IDENTIFIER
+                or temp_token_type == TokenTypes.RESERVED_WORD
+                or temp_token_type == TokenTypes.NUMBER
+                or temp_token_type == TokenTypes.STRING
+        )
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_args(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["id", "-", "log", "(", "!", "local", "num", "str", "global"],
-                    token_queue.peek(),
-                )
-            )
-        if token_queue.peek().get_lexeme() == ")":
+        if token_queue.peek() and token_queue.peek().get_lexeme() == ")":
             node.add(token_queue.remove())
         else:
             error_list.append(SynthaticParseErrors([")"], token_queue.peek()))
-        if token_queue.peek().get_lexeme() == ";":
+        if token_queue.peek() and token_queue.peek().get_lexeme() == ";":
             node.add(token_queue.remove())
         else:
             error_list.append(SynthaticParseErrors([";"], token_queue.peek()))
+
     # Predicting for production [read, '(', <Args>, ')', ';']
-    elif token_queue.peek().get_lexeme() == "read":
+    elif token_queue.peek() and token_queue.peek().get_lexeme() == "read":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() == "(":
+        if token_queue.peek() and token_queue.peek().get_lexeme() == "(":
             node.add(token_queue.remove())
         else:
             error_list.append(SynthaticParseErrors(["("], token_queue.peek()))
-        if token_queue.peek().get_lexeme() in [
-            "id",
-            "-",
-            "log",
-            "(",
-            "!",
-            "local",
-            "num",
-            "str",
-            "global",
-        ]:
+        # Predicting for production <Args>
+        local_first_set = ["-", "(", "!", "local", "global"]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = (
+                temp_token_type == TokenTypes.IDENTIFIER
+                or temp_token_type == TokenTypes.RESERVED_WORD
+                or temp_token_type == TokenTypes.NUMBER
+                or temp_token_type == TokenTypes.STRING
+        )
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_args(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["id", "-", "log", "(", "!", "local", "num", "str", "global"],
-                    token_queue.peek(),
-                )
-            )
-        if token_queue.peek().get_lexeme() == ")":
+        if token_queue.peek() and token_queue.peek().get_lexeme() == ")":
             node.add(token_queue.remove())
         else:
             error_list.append(SynthaticParseErrors([")"], token_queue.peek()))
-        if token_queue.peek().get_lexeme() == ";":
+        if token_queue.peek() and token_queue.peek().get_lexeme() == ";":
             node.add(token_queue.remove())
         else:
             error_list.append(SynthaticParseErrors([";"], token_queue.peek()))
+
     return node
 
 
@@ -1639,29 +1710,36 @@ def sp_var_stm(
     """
 
     node = SynthaticNode(production="<Var Stm>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [<Stm Scope>]
-    if token_queue.peek().get_lexeme() in ["local", "global"]:
+    if token_queue.peek() and token_queue.peek().get_lexeme() in ["local", "global"]:
         temp = sp_stm_scope(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
+
     # Predicting for production [id, <Stm Id>]
-    elif token_queue.peek().get_lexeme() == "id":
+    elif (
+            token_queue.peek()
+            and token_queue.peek().get_token_type() == TokenTypes.IDENTIFIER
+    ):
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in ["(", "--", ".", "[", "=", "++"]:
+        # Predicting for production <Stm Id>
+        local_first_set = ["(", "--", ".", "[", "=", "++"]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_stm_id(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["(", "--", ".", "[", "=", "++"], token_queue.peek()
-                )
-            )
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+
     # Predicting for production [<Stm Cmd>]
-    elif token_queue.peek().get_lexeme() in ["read", "print"]:
+    elif token_queue.peek() and token_queue.peek().get_lexeme() in ["read", "print"]:
         temp = sp_stm_cmd(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
+
     return node
 
 
@@ -1671,21 +1749,24 @@ def sp_const_block(
     """
     This function parse tokens for production <Const Block>\n
     Accepted productions below\n
-    [const, '[', <Const Decls>, ']']\n
+    [const, '{', <Const Decls>, '}']\n
     []\n
     """
 
     node = SynthaticNode(production="<Const Block>")
-    # Predicting for production [const, '[', <Const Decls>, ']']
-    if token_queue.peek().get_lexeme() == "const":
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
+    # Predicting for production [const, '{', <Const Decls>, '}']
+    if token_queue.peek() and token_queue.peek().get_lexeme() == "const":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() == "[":
+        if token_queue.peek() and token_queue.peek().get_lexeme() == "{":
             node.add(token_queue.remove())
         else:
-            error_list.append(SynthaticParseErrors(["["], token_queue.peek()))
-        if token_queue.peek().get_lexeme() in [
+            error_list.append(SynthaticParseErrors(["{"], token_queue.peek()))
+        # Predicting for production <Const Decls>
+        local_first_set = [
             "typedef",
-            "id",
             "boolean",
             "string",
             "global",
@@ -1693,34 +1774,26 @@ def sp_const_block(
             "int",
             "real",
             "struct",
-        ]:
+        ]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = temp_token_type == TokenTypes.IDENTIFIER
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_const_decls(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(
-                SynthaticParseErrors(
-                    [
-                        "typedef",
-                        "id",
-                        "boolean",
-                        "string",
-                        "global",
-                        "local",
-                        "int",
-                        "real",
-                        "struct",
-                    ],
-                    token_queue.peek(),
-                )
-            )
-        if token_queue.peek().get_lexeme() == "]":
+        if token_queue.peek() and token_queue.peek().get_lexeme() == "}":
             node.add(token_queue.remove())
         else:
-            error_list.append(SynthaticParseErrors(["]"], token_queue.peek()))
+            error_list.append(SynthaticParseErrors(["}"], token_queue.peek()))
+
     # Predicting for production []
     else:
         return node
+
     return node
 
 
@@ -1730,57 +1803,60 @@ def sp_proc_decl(
     """
     This function parse tokens for production <Proc Decl>\n
     Accepted productions below\n
-    [procedure, id, '(', <Params>, ')', '[', <Func Block>, ']']\n
+    [procedure, id, '(', <Params>, ')', '{', <Func Block>, '}']\n
     """
 
     node = SynthaticNode(production="<Proc Decl>")
-    # Predicting for production [procedure, id, '(', <Params>, ')', '[', <Func Block>, ']']
-    if token_queue.peek().get_lexeme() == "procedure":
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
+    # Predicting for production [procedure, id, '(', <Params>, ')', '{', <Func Block>, '}']
+    if token_queue.peek() and token_queue.peek().get_lexeme() == "procedure":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() == "id":
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_token_type() == TokenTypes.IDENTIFIER
+        ):
             node.add(token_queue.remove())
         else:
             error_list.append(SynthaticParseErrors(["id"], token_queue.peek()))
-        if token_queue.peek().get_lexeme() == "(":
+        if token_queue.peek() and token_queue.peek().get_lexeme() == "(":
             node.add(token_queue.remove())
         else:
             error_list.append(SynthaticParseErrors(["("], token_queue.peek()))
-        if token_queue.peek().get_lexeme() in [
-            "id",
-            "boolean",
-            "real",
-            "int",
-            "string",
-            "struct",
-        ]:
+        # Predicting for production <Params>
+        local_first_set = ["boolean", "real", "int", "string", "struct"]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = temp_token_type == TokenTypes.IDENTIFIER
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_params(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["id", "boolean", "real", "int", "string", "struct"],
-                    token_queue.peek(),
-                )
-            )
-        if token_queue.peek().get_lexeme() == ")":
+        if token_queue.peek() and token_queue.peek().get_lexeme() == ")":
             node.add(token_queue.remove())
         else:
             error_list.append(SynthaticParseErrors([")"], token_queue.peek()))
-        if token_queue.peek().get_lexeme() == "[":
+        if token_queue.peek() and token_queue.peek().get_lexeme() == "{":
             node.add(token_queue.remove())
         else:
-            error_list.append(SynthaticParseErrors(["["], token_queue.peek()))
-        if token_queue.peek().get_lexeme() in ["var"]:
+            error_list.append(SynthaticParseErrors(["{"], token_queue.peek()))
+        # Predicting for production <Func Block>
+        local_first_set = ["var"]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_func_block(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(SynthaticParseErrors(["var"], token_queue.peek()))
-        if token_queue.peek().get_lexeme() == "]":
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+        if token_queue.peek() and token_queue.peek().get_lexeme() == "}":
             node.add(token_queue.remove())
         else:
-            error_list.append(SynthaticParseErrors(["]"], token_queue.peek()))
+            error_list.append(SynthaticParseErrors(["}"], token_queue.peek()))
+
     return node
 
 
@@ -1795,26 +1871,28 @@ def sp_decl_atribute(
     """
 
     node = SynthaticNode(production="<Decl Atribute>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [<Array Decl>]
-    if token_queue.peek().get_lexeme() in ["{"]:
+    if token_queue.peek() and token_queue.peek().get_lexeme() in ["{"]:
         temp = sp_array_decl(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
+
     # Predicting for production [<Expr>]
-    elif token_queue.peek().get_lexeme() in [
-        "id",
-        "-",
-        "log",
-        "global",
-        "!",
-        "local",
-        "num",
-        "(",
-        "str",
-    ]:
+    elif (
+            token_queue.peek()
+            and token_queue.peek().get_lexeme() in ["-", "global", "!", "local", "("]
+            or temp_token_type == TokenTypes.IDENTIFIER
+            or temp_token_type == TokenTypes.RESERVED_WORD
+            or temp_token_type == TokenTypes.NUMBER
+            or temp_token_type == TokenTypes.STRING
+    ):
         temp = sp_expr(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
+
     return node
 
 
@@ -1832,137 +1910,129 @@ def sp_compare__(
     """
 
     node = SynthaticNode(production="<Compare_>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production ['<', <Add>, <Compare_>]
-    if token_queue.peek().get_lexeme() == "<":
+    if token_queue.peek() and token_queue.peek().get_lexeme() == "<":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in [
-            "id",
-            "-",
-            "str",
-            "global",
-            "!",
-            "local",
-            "num",
-            "log",
-            "(",
-        ]:
+        # Predicting for production <Add>
+        local_first_set = ["-", "global", "!", "local", "("]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = (
+                temp_token_type == TokenTypes.IDENTIFIER
+                or temp_token_type == TokenTypes.STRING
+                or temp_token_type == TokenTypes.NUMBER
+                or temp_token_type == TokenTypes.RESERVED_WORD
+        )
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_add(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["id", "-", "str", "global", "!", "local", "num", "log", "("],
-                    token_queue.peek(),
-                )
-            )
-        if token_queue.peek().get_lexeme() in ["<=", "<", ">=", ">"]:
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+        # Predicting for production <Compare_>
+        local_first_set = ["<=", "<", ">=", ">"]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_compare__(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(
-                SynthaticParseErrors(["<=", "<", ">=", ">"], token_queue.peek())
-            )
+
     # Predicting for production ['>', <Add>, <Compare_>]
-    elif token_queue.peek().get_lexeme() == ">":
+    elif token_queue.peek() and token_queue.peek().get_lexeme() == ">":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in [
-            "id",
-            "-",
-            "str",
-            "global",
-            "!",
-            "local",
-            "num",
-            "log",
-            "(",
-        ]:
+        # Predicting for production <Add>
+        local_first_set = ["-", "global", "!", "local", "("]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = (
+                temp_token_type == TokenTypes.IDENTIFIER
+                or temp_token_type == TokenTypes.STRING
+                or temp_token_type == TokenTypes.NUMBER
+                or temp_token_type == TokenTypes.RESERVED_WORD
+        )
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_add(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["id", "-", "str", "global", "!", "local", "num", "log", "("],
-                    token_queue.peek(),
-                )
-            )
-        if token_queue.peek().get_lexeme() in ["<=", "<", ">=", ">"]:
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+        # Predicting for production <Compare_>
+        local_first_set = ["<=", "<", ">=", ">"]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_compare__(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(
-                SynthaticParseErrors(["<=", "<", ">=", ">"], token_queue.peek())
-            )
+
     # Predicting for production ['<=', <Add>, <Compare_>]
-    elif token_queue.peek().get_lexeme() == "<=":
+    elif token_queue.peek() and token_queue.peek().get_lexeme() == "<=":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in [
-            "id",
-            "-",
-            "str",
-            "global",
-            "!",
-            "local",
-            "num",
-            "log",
-            "(",
-        ]:
+        # Predicting for production <Add>
+        local_first_set = ["-", "global", "!", "local", "("]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = (
+                temp_token_type == TokenTypes.IDENTIFIER
+                or temp_token_type == TokenTypes.STRING
+                or temp_token_type == TokenTypes.NUMBER
+                or temp_token_type == TokenTypes.RESERVED_WORD
+        )
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_add(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["id", "-", "str", "global", "!", "local", "num", "log", "("],
-                    token_queue.peek(),
-                )
-            )
-        if token_queue.peek().get_lexeme() in ["<=", "<", ">=", ">"]:
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+        # Predicting for production <Compare_>
+        local_first_set = ["<=", "<", ">=", ">"]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_compare__(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(
-                SynthaticParseErrors(["<=", "<", ">=", ">"], token_queue.peek())
-            )
+
     # Predicting for production ['>=', <Add>, <Compare_>]
-    elif token_queue.peek().get_lexeme() == ">=":
+    elif token_queue.peek() and token_queue.peek().get_lexeme() == ">=":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in [
-            "id",
-            "-",
-            "str",
-            "global",
-            "!",
-            "local",
-            "num",
-            "log",
-            "(",
-        ]:
+        # Predicting for production <Add>
+        local_first_set = ["-", "global", "!", "local", "("]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = (
+                temp_token_type == TokenTypes.IDENTIFIER
+                or temp_token_type == TokenTypes.STRING
+                or temp_token_type == TokenTypes.NUMBER
+                or temp_token_type == TokenTypes.RESERVED_WORD
+        )
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_add(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["id", "-", "str", "global", "!", "local", "num", "log", "("],
-                    token_queue.peek(),
-                )
-            )
-        if token_queue.peek().get_lexeme() in ["<=", "<", ">=", ">"]:
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+        # Predicting for production <Compare_>
+        local_first_set = ["<=", "<", ">=", ">"]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_compare__(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(
-                SynthaticParseErrors(["<=", "<", ">=", ">"], token_queue.peek())
-            )
+
     # Predicting for production []
     else:
         return node
+
     return node
 
 
@@ -1977,52 +2047,61 @@ def sp_stm_scope(
     """
 
     node = SynthaticNode(production="<Stm Scope>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [local, <Access>, <Accesses>, <Assign>]
-    if token_queue.peek().get_lexeme() == "local":
+    if token_queue.peek() and token_queue.peek().get_lexeme() == "local":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in ["."]:
+        # Predicting for production <Access>
+        local_first_set = ["."]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_access(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(SynthaticParseErrors(["."], token_queue.peek()))
-        if token_queue.peek().get_lexeme() in ["."]:
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+        # Predicting for production <Accesses>
+        local_first_set = ["."]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_accesses(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(SynthaticParseErrors(["."], token_queue.peek()))
-        if token_queue.peek().get_lexeme() in ["++", "--", "="]:
+        # Predicting for production <Assign>
+        local_first_set = ["++", "--", "="]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_assign(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(
-                SynthaticParseErrors(["++", "--", "="], token_queue.peek())
-            )
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+
     # Predicting for production [global, <Access>, <Accesses>, <Assign>]
-    elif token_queue.peek().get_lexeme() == "global":
+    elif token_queue.peek() and token_queue.peek().get_lexeme() == "global":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in ["."]:
+        # Predicting for production <Access>
+        local_first_set = ["."]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_access(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(SynthaticParseErrors(["."], token_queue.peek()))
-        if token_queue.peek().get_lexeme() in ["."]:
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+        # Predicting for production <Accesses>
+        local_first_set = ["."]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_accesses(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(SynthaticParseErrors(["."], token_queue.peek()))
-        if token_queue.peek().get_lexeme() in ["++", "--", "="]:
+        # Predicting for production <Assign>
+        local_first_set = ["++", "--", "="]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_assign(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(
-                SynthaticParseErrors(["++", "--", "="], token_queue.peek())
-            )
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+
     return node
 
 
@@ -2032,18 +2111,21 @@ def sp_func_normal_stm(
     """
     This function parse tokens for production <Func Normal Stm>\n
     Accepted productions below\n
-    ['[', <Func Stms>, ']']\n
+    ['{', <Func Stms>, '}']\n
     [<Var Stm>]\n
     [return, <Expr>, ';']\n
     """
 
     node = SynthaticNode(production="<Func Normal Stm>")
-    # Predicting for production ['[', <Func Stms>, ']']
-    if token_queue.peek().get_lexeme() == "[":
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
+    # Predicting for production ['{', <Func Stms>, '}']
+    if token_queue.peek() and token_queue.peek().get_lexeme() == "{":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in [
+        # Predicting for production <Func Stms>
+        local_first_set = [
             "read",
-            "id",
             "return",
             "{",
             "print",
@@ -2051,64 +2133,59 @@ def sp_func_normal_stm(
             "local",
             "if",
             "while",
-        ]:
+        ]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = temp_token_type == TokenTypes.IDENTIFIER
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_func_stms(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(
-                SynthaticParseErrors(
-                    [
-                        "read",
-                        "id",
-                        "return",
-                        "{",
-                        "print",
-                        "global",
-                        "local",
-                        "if",
-                        "while",
-                    ],
-                    token_queue.peek(),
-                )
-            )
-        if token_queue.peek().get_lexeme() == "]":
+        if token_queue.peek() and token_queue.peek().get_lexeme() == "}":
             node.add(token_queue.remove())
         else:
-            error_list.append(SynthaticParseErrors(["]"], token_queue.peek()))
+            error_list.append(SynthaticParseErrors(["}"], token_queue.peek()))
+
     # Predicting for production [<Var Stm>]
-    elif token_queue.peek().get_lexeme() in ["read", "id", "local", "global", "print"]:
+    elif (
+            token_queue.peek()
+            and token_queue.peek().get_lexeme() in ["read", "local", "global", "print"]
+            or temp_token_type == TokenTypes.IDENTIFIER
+    ):
         temp = sp_var_stm(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
+
     # Predicting for production [return, <Expr>, ';']
-    elif token_queue.peek().get_lexeme() == "return":
+    elif token_queue.peek() and token_queue.peek().get_lexeme() == "return":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in [
-            "id",
-            "-",
-            "log",
-            "global",
-            "!",
-            "local",
-            "num",
-            "(",
-            "str",
-        ]:
+        # Predicting for production <Expr>
+        local_first_set = ["-", "global", "!", "local", "("]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = (
+                temp_token_type == TokenTypes.IDENTIFIER
+                or temp_token_type == TokenTypes.RESERVED_WORD
+                or temp_token_type == TokenTypes.NUMBER
+                or temp_token_type == TokenTypes.STRING
+        )
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_expr(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["id", "-", "log", "global", "!", "local", "num", "(", "str"],
-                    token_queue.peek(),
-                )
-            )
-        if token_queue.peek().get_lexeme() == ";":
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+        if token_queue.peek() and token_queue.peek().get_lexeme() == ";":
             node.add(token_queue.remove())
         else:
             error_list.append(SynthaticParseErrors([";"], token_queue.peek()))
+
     return node
 
 
@@ -2123,31 +2200,31 @@ def sp_else_stm(
     """
 
     node = SynthaticNode(production="<Else Stm>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [else, <Func Normal Stm>]
-    if token_queue.peek().get_lexeme() == "else":
+    if token_queue.peek() and token_queue.peek().get_lexeme() == "else":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in [
-            "read",
-            "id",
-            "local",
-            "return",
-            "{",
-            "global",
-            "print",
-        ]:
+        # Predicting for production <Func Normal Stm>
+        local_first_set = ["read", "local", "return", "{", "global", "print"]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = temp_token_type == TokenTypes.IDENTIFIER
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_func_normal_stm(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["read", "id", "local", "return", "{", "global", "print"],
-                    token_queue.peek(),
-                )
-            )
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+
     # Predicting for production []
     else:
         return node
+
     return node
 
 
@@ -2161,28 +2238,28 @@ def sp_log_compare(
     """
 
     node = SynthaticNode(production="<Log Compare>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [<Log Unary>, <Log Compare_>]
-    if token_queue.peek().get_lexeme() in [
-        "global",
-        "id",
-        "local",
-        "num",
-        "log",
-        "str",
-        "(",
-        "!",
-    ]:
+    if (
+            token_queue.peek()
+            and token_queue.peek().get_lexeme() in ["global", "local", "(", "!"]
+            or temp_token_type == TokenTypes.IDENTIFIER
+            or temp_token_type == TokenTypes.NUMBER
+            or temp_token_type == TokenTypes.RESERVED_WORD
+            or temp_token_type == TokenTypes.STRING
+    ):
         temp = sp_log_unary(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
-        if token_queue.peek().get_lexeme() in ["<=", "<", ">=", ">"]:
+        # Predicting for production <Log Compare_>
+        local_first_set = ["<=", "<", ">=", ">"]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_log_compare__(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(
-                SynthaticParseErrors(["<=", "<", ">=", ">"], token_queue.peek())
-            )
+
     return node
 
 
@@ -2199,8 +2276,11 @@ def sp_var_decl(
     """
 
     node = SynthaticNode(production="<Var Decl>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [<Type>, <Var>, <Var List>, ';']
-    if token_queue.peek().get_lexeme() in [
+    if token_queue.peek() and token_queue.peek().get_lexeme() in [
         "real",
         "boolean",
         "int",
@@ -2210,45 +2290,64 @@ def sp_var_decl(
         temp = sp_type(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
-        if token_queue.peek().get_lexeme() in ["id"]:
+        # Predicting for production <Var>
+        local_first_set = []
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = temp_token_type == TokenTypes.IDENTIFIER
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_var(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(SynthaticParseErrors(["id"], token_queue.peek()))
-        if token_queue.peek().get_lexeme() in [",", "="]:
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+        # Predicting for production <Var List>
+        local_first_set = [",", "="]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_var_list(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(SynthaticParseErrors([",", "="], token_queue.peek()))
-        if token_queue.peek().get_lexeme() == ";":
+        if token_queue.peek() and token_queue.peek().get_lexeme() == ";":
             node.add(token_queue.remove())
         else:
             error_list.append(SynthaticParseErrors([";"], token_queue.peek()))
+
     # Predicting for production [<Typedef>]
-    elif token_queue.peek().get_lexeme() in ["typedef"]:
+    elif token_queue.peek() and token_queue.peek().get_lexeme() in ["typedef"]:
         temp = sp_typedef(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
+
     # Predicting for production [<Stm Scope>]
-    elif token_queue.peek().get_lexeme() in ["local", "global"]:
+    elif token_queue.peek() and token_queue.peek().get_lexeme() in ["local", "global"]:
         temp = sp_stm_scope(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
+
     # Predicting for production [id, <Var Id>]
-    elif token_queue.peek().get_lexeme() == "id":
+    elif (
+            token_queue.peek()
+            and token_queue.peek().get_token_type() == TokenTypes.IDENTIFIER
+    ):
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in ["(", "--", ".", "[", "++", "=", "id"]:
+        # Predicting for production <Var Id>
+        local_first_set = ["(", "--", ".", "[", "++", "="]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = temp_token_type == TokenTypes.IDENTIFIER
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_var_id(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["(", "--", ".", "[", "++", "=", "id"], token_queue.peek()
-                )
-            )
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+
     return node
 
 
@@ -2262,15 +2361,22 @@ def sp_const(
     """
 
     node = SynthaticNode(production="<Const>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [id, <Arrays>]
-    if token_queue.peek().get_lexeme() == "id":
+    if (
+            token_queue.peek()
+            and token_queue.peek().get_token_type() == TokenTypes.IDENTIFIER
+    ):
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in ["["]:
+        # Predicting for production <Arrays>
+        local_first_set = ["["]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_arrays(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(SynthaticParseErrors(["["], token_queue.peek()))
+
     return node
 
 
@@ -2285,50 +2391,62 @@ def sp_const_list(
     """
 
     node = SynthaticNode(production="<Const List>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [',', <Const>, <Const List>]
-    if token_queue.peek().get_lexeme() == ",":
+    if token_queue.peek() and token_queue.peek().get_lexeme() == ",":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in ["id"]:
+        # Predicting for production <Const>
+        local_first_set = []
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = temp_token_type == TokenTypes.IDENTIFIER
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_const(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(SynthaticParseErrors(["id"], token_queue.peek()))
-        if token_queue.peek().get_lexeme() in ["=", ","]:
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+        # Predicting for production <Const List>
+        local_first_set = ["=", ","]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_const_list(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(SynthaticParseErrors(["=", ","], token_queue.peek()))
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+
     # Predicting for production ['=', <Decl Atribute>, ';']
-    elif token_queue.peek().get_lexeme() == "=":
+    elif token_queue.peek() and token_queue.peek().get_lexeme() == "=":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in [
-            "id",
-            "-",
-            "{",
-            "global",
-            "!",
-            "local",
-            "num",
-            "str",
-            "(",
-            "log",
-        ]:
+        # Predicting for production <Decl Atribute>
+        local_first_set = ["-", "{", "global", "!", "local", "("]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = (
+                temp_token_type == TokenTypes.IDENTIFIER
+                or temp_token_type == TokenTypes.NUMBER
+                or temp_token_type == TokenTypes.STRING
+                or temp_token_type == TokenTypes.RESERVED_WORD
+        )
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_decl_atribute(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["id", "-", "{", "global", "!", "local", "num", "str", "(", "log"],
-                    token_queue.peek(),
-                )
-            )
-        if token_queue.peek().get_lexeme() == ";":
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+        if token_queue.peek() and token_queue.peek().get_lexeme() == ";":
             node.add(token_queue.remove())
         else:
             error_list.append(SynthaticParseErrors([";"], token_queue.peek()))
+
     return node
 
 
@@ -2344,54 +2462,66 @@ def sp_var_list(
     """
 
     node = SynthaticNode(production="<Var List>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [',', <Var>, <Var List>]
-    if token_queue.peek().get_lexeme() == ",":
+    if token_queue.peek() and token_queue.peek().get_lexeme() == ",":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in ["id"]:
+        # Predicting for production <Var>
+        local_first_set = []
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = temp_token_type == TokenTypes.IDENTIFIER
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_var(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(SynthaticParseErrors(["id"], token_queue.peek()))
-        if token_queue.peek().get_lexeme() in [",", "="]:
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+        # Predicting for production <Var List>
+        local_first_set = [",", "="]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_var_list(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(SynthaticParseErrors([",", "="], token_queue.peek()))
+
     # Predicting for production ['=', <Expr>, <Var List>]
-    elif token_queue.peek().get_lexeme() == "=":
+    elif token_queue.peek() and token_queue.peek().get_lexeme() == "=":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in [
-            "id",
-            "-",
-            "log",
-            "global",
-            "!",
-            "local",
-            "num",
-            "(",
-            "str",
-        ]:
+        # Predicting for production <Expr>
+        local_first_set = ["-", "global", "!", "local", "("]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = (
+                temp_token_type == TokenTypes.IDENTIFIER
+                or temp_token_type == TokenTypes.RESERVED_WORD
+                or temp_token_type == TokenTypes.NUMBER
+                or temp_token_type == TokenTypes.STRING
+        )
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_expr(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["id", "-", "log", "global", "!", "local", "num", "(", "str"],
-                    token_queue.peek(),
-                )
-            )
-        if token_queue.peek().get_lexeme() in [",", "="]:
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+        # Predicting for production <Var List>
+        local_first_set = [",", "="]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_var_list(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(SynthaticParseErrors([",", "="], token_queue.peek()))
+
     # Predicting for production []
     else:
         return node
+
     return node
 
 
@@ -2406,18 +2536,25 @@ def sp_array_vector(
     """
 
     node = SynthaticNode(production="<Array Vector>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [',', <Array Decl>]
-    if token_queue.peek().get_lexeme() == ",":
+    if token_queue.peek() and token_queue.peek().get_lexeme() == ",":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in ["{"]:
+        # Predicting for production <Array Decl>
+        local_first_set = ["{"]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_array_decl(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(SynthaticParseErrors(["{"], token_queue.peek()))
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+
     # Predicting for production []
     else:
         return node
+
     return node
 
 
@@ -2435,25 +2572,36 @@ def sp_type(
     """
 
     node = SynthaticNode(production="<Type>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [int]
-    if token_queue.peek().get_lexeme() == "int":
+    if token_queue.peek() and token_queue.peek().get_lexeme() == "int":
         node.add(token_queue.remove())
+
     # Predicting for production [real]
-    elif token_queue.peek().get_lexeme() == "real":
+    elif token_queue.peek() and token_queue.peek().get_lexeme() == "real":
         node.add(token_queue.remove())
+
     # Predicting for production [boolean]
-    elif token_queue.peek().get_lexeme() == "boolean":
+    elif token_queue.peek() and token_queue.peek().get_lexeme() == "boolean":
         node.add(token_queue.remove())
+
     # Predicting for production [string]
-    elif token_queue.peek().get_lexeme() == "string":
+    elif token_queue.peek() and token_queue.peek().get_lexeme() == "string":
         node.add(token_queue.remove())
+
     # Predicting for production [struct, id]
-    elif token_queue.peek().get_lexeme() == "struct":
+    elif token_queue.peek() and token_queue.peek().get_lexeme() == "struct":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() == "id":
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_token_type() == TokenTypes.IDENTIFIER
+        ):
             node.add(token_queue.remove())
         else:
             error_list.append(SynthaticParseErrors(["id"], token_queue.peek()))
+
     return node
 
 
@@ -2467,26 +2615,28 @@ def sp_log_or(
     """
 
     node = SynthaticNode(production="<Log Or>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [<Log And>, <Log Or_>]
-    if token_queue.peek().get_lexeme() in [
-        "global",
-        "id",
-        "local",
-        "num",
-        "log",
-        "!",
-        "(",
-        "str",
-    ]:
+    if (
+            token_queue.peek()
+            and token_queue.peek().get_lexeme() in ["global", "local", "!", "("]
+            or temp_token_type == TokenTypes.IDENTIFIER
+            or temp_token_type == TokenTypes.NUMBER
+            or temp_token_type == TokenTypes.RESERVED_WORD
+            or temp_token_type == TokenTypes.STRING
+    ):
         temp = sp_log_and(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
-        if token_queue.peek().get_lexeme() in ["||"]:
+        # Predicting for production <Log Or_>
+        local_first_set = ["||"]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_log_or__(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(SynthaticParseErrors(["||"], token_queue.peek()))
+
     return node
 
 
@@ -2506,69 +2656,92 @@ def sp_log_value(
     """
 
     node = SynthaticNode(production="<Log Value>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [num]
-    if token_queue.peek().get_lexeme() == "num":
+    if token_queue.peek() and token_queue.peek().get_token_type() == TokenTypes.NUMBER:
         node.add(token_queue.remove())
+
     # Predicting for production [str]
-    elif token_queue.peek().get_lexeme() == "str":
+    elif (
+            token_queue.peek() and token_queue.peek().get_token_type() == TokenTypes.STRING
+    ):
         node.add(token_queue.remove())
+
     # Predicting for production [log]
-    elif token_queue.peek().get_lexeme() == "log":
+    elif (
+            token_queue.peek()
+            and token_queue.peek().get_token_type() == TokenTypes.RESERVED_WORD
+    ):
         node.add(token_queue.remove())
+
     # Predicting for production [local, <Access>]
-    elif token_queue.peek().get_lexeme() == "local":
+    elif token_queue.peek() and token_queue.peek().get_lexeme() == "local":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in ["."]:
+        # Predicting for production <Access>
+        local_first_set = ["."]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_access(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(SynthaticParseErrors(["."], token_queue.peek()))
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+
     # Predicting for production [global, <Access>]
-    elif token_queue.peek().get_lexeme() == "global":
+    elif token_queue.peek() and token_queue.peek().get_lexeme() == "global":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in ["."]:
+        # Predicting for production <Access>
+        local_first_set = ["."]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_access(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(SynthaticParseErrors(["."], token_queue.peek()))
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+
     # Predicting for production [id, <Id Value>]
-    elif token_queue.peek().get_lexeme() == "id":
+    elif (
+            token_queue.peek()
+            and token_queue.peek().get_token_type() == TokenTypes.IDENTIFIER
+    ):
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in ["[", "("]:
+        # Predicting for production <Id Value>
+        local_first_set = ["[", "("]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_id_value(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(SynthaticParseErrors(["[", "("], token_queue.peek()))
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+
     # Predicting for production ['(', <Log Expr>, ')']
-    elif token_queue.peek().get_lexeme() == "(":
+    elif token_queue.peek() and token_queue.peek().get_lexeme() == "(":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in [
-            "global",
-            "id",
-            "local",
-            "num",
-            "log",
-            "!",
-            "(",
-            "str",
-        ]:
+        # Predicting for production <Log Expr>
+        local_first_set = ["global", "local", "!", "("]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = (
+                temp_token_type == TokenTypes.IDENTIFIER
+                or temp_token_type == TokenTypes.NUMBER
+                or temp_token_type == TokenTypes.RESERVED_WORD
+                or temp_token_type == TokenTypes.STRING
+        )
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_log_expr(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["global", "id", "local", "num", "log", "!", "(", "str"],
-                    token_queue.peek(),
-                )
-            )
-        if token_queue.peek().get_lexeme() == ")":
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+        if token_queue.peek() and token_queue.peek().get_lexeme() == ")":
             node.add(token_queue.remove())
         else:
             error_list.append(SynthaticParseErrors([")"], token_queue.peek()))
+
     return node
 
 
@@ -2586,133 +2759,129 @@ def sp_log_compare__(
     """
 
     node = SynthaticNode(production="<Log Compare_>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production ['<', <Log Unary>, <Log Compare_>]
-    if token_queue.peek().get_lexeme() == "<":
+    if token_queue.peek() and token_queue.peek().get_lexeme() == "<":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in [
-            "global",
-            "id",
-            "local",
-            "num",
-            "log",
-            "str",
-            "(",
-            "!",
-        ]:
+        # Predicting for production <Log Unary>
+        local_first_set = ["global", "local", "(", "!"]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = (
+                temp_token_type == TokenTypes.IDENTIFIER
+                or temp_token_type == TokenTypes.NUMBER
+                or temp_token_type == TokenTypes.RESERVED_WORD
+                or temp_token_type == TokenTypes.STRING
+        )
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_log_unary(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["global", "id", "local", "num", "log", "str", "(", "!"],
-                    token_queue.peek(),
-                )
-            )
-        if token_queue.peek().get_lexeme() in ["<=", "<", ">=", ">"]:
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+        # Predicting for production <Log Compare_>
+        local_first_set = ["<=", "<", ">=", ">"]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_log_compare__(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(
-                SynthaticParseErrors(["<=", "<", ">=", ">"], token_queue.peek())
-            )
+
     # Predicting for production ['>', <Log Unary>, <Log Compare_>]
-    elif token_queue.peek().get_lexeme() == ">":
+    elif token_queue.peek() and token_queue.peek().get_lexeme() == ">":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in [
-            "global",
-            "id",
-            "local",
-            "num",
-            "log",
-            "str",
-            "(",
-            "!",
-        ]:
+        # Predicting for production <Log Unary>
+        local_first_set = ["global", "local", "(", "!"]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = (
+                temp_token_type == TokenTypes.IDENTIFIER
+                or temp_token_type == TokenTypes.NUMBER
+                or temp_token_type == TokenTypes.RESERVED_WORD
+                or temp_token_type == TokenTypes.STRING
+        )
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_log_unary(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["global", "id", "local", "num", "log", "str", "(", "!"],
-                    token_queue.peek(),
-                )
-            )
-        if token_queue.peek().get_lexeme() in ["<=", "<", ">=", ">"]:
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+        # Predicting for production <Log Compare_>
+        local_first_set = ["<=", "<", ">=", ">"]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_log_compare__(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(
-                SynthaticParseErrors(["<=", "<", ">=", ">"], token_queue.peek())
-            )
+
     # Predicting for production ['<=', <Log Unary>, <Log Compare_>]
-    elif token_queue.peek().get_lexeme() == "<=":
+    elif token_queue.peek() and token_queue.peek().get_lexeme() == "<=":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in [
-            "global",
-            "id",
-            "local",
-            "num",
-            "log",
-            "str",
-            "(",
-            "!",
-        ]:
+        # Predicting for production <Log Unary>
+        local_first_set = ["global", "local", "(", "!"]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = (
+                temp_token_type == TokenTypes.IDENTIFIER
+                or temp_token_type == TokenTypes.NUMBER
+                or temp_token_type == TokenTypes.RESERVED_WORD
+                or temp_token_type == TokenTypes.STRING
+        )
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_log_unary(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["global", "id", "local", "num", "log", "str", "(", "!"],
-                    token_queue.peek(),
-                )
-            )
-        if token_queue.peek().get_lexeme() in ["<=", "<", ">=", ">"]:
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+        # Predicting for production <Log Compare_>
+        local_first_set = ["<=", "<", ">=", ">"]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_log_compare__(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(
-                SynthaticParseErrors(["<=", "<", ">=", ">"], token_queue.peek())
-            )
+
     # Predicting for production ['>=', <Log Unary>, <Log Compare_>]
-    elif token_queue.peek().get_lexeme() == ">=":
+    elif token_queue.peek() and token_queue.peek().get_lexeme() == ">=":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in [
-            "global",
-            "id",
-            "local",
-            "num",
-            "log",
-            "str",
-            "(",
-            "!",
-        ]:
+        # Predicting for production <Log Unary>
+        local_first_set = ["global", "local", "(", "!"]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = (
+                temp_token_type == TokenTypes.IDENTIFIER
+                or temp_token_type == TokenTypes.NUMBER
+                or temp_token_type == TokenTypes.RESERVED_WORD
+                or temp_token_type == TokenTypes.STRING
+        )
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_log_unary(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["global", "id", "local", "num", "log", "str", "(", "!"],
-                    token_queue.peek(),
-                )
-            )
-        if token_queue.peek().get_lexeme() in ["<=", "<", ">=", ">"]:
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+        # Predicting for production <Log Compare_>
+        local_first_set = ["<=", "<", ">=", ">"]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_log_compare__(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(
-                SynthaticParseErrors(["<=", "<", ">=", ">"], token_queue.peek())
-            )
+
     # Predicting for production []
     else:
         return node
+
     return node
 
 
@@ -2728,48 +2897,52 @@ def sp_assign(
     """
 
     node = SynthaticNode(production="<Assign>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production ['=', <Expr>, ';']
-    if token_queue.peek().get_lexeme() == "=":
+    if token_queue.peek() and token_queue.peek().get_lexeme() == "=":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in [
-            "id",
-            "-",
-            "log",
-            "global",
-            "!",
-            "local",
-            "num",
-            "(",
-            "str",
-        ]:
+        # Predicting for production <Expr>
+        local_first_set = ["-", "global", "!", "local", "("]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = (
+                temp_token_type == TokenTypes.IDENTIFIER
+                or temp_token_type == TokenTypes.RESERVED_WORD
+                or temp_token_type == TokenTypes.NUMBER
+                or temp_token_type == TokenTypes.STRING
+        )
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_expr(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["id", "-", "log", "global", "!", "local", "num", "(", "str"],
-                    token_queue.peek(),
-                )
-            )
-        if token_queue.peek().get_lexeme() == ";":
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+        if token_queue.peek() and token_queue.peek().get_lexeme() == ";":
             node.add(token_queue.remove())
         else:
             error_list.append(SynthaticParseErrors([";"], token_queue.peek()))
+
     # Predicting for production ['++', ';']
-    elif token_queue.peek().get_lexeme() == "++":
+    elif token_queue.peek() and token_queue.peek().get_lexeme() == "++":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() == ";":
+        if token_queue.peek() and token_queue.peek().get_lexeme() == ";":
             node.add(token_queue.remove())
         else:
             error_list.append(SynthaticParseErrors([";"], token_queue.peek()))
+
     # Predicting for production ['--', ';']
-    elif token_queue.peek().get_lexeme() == "--":
+    elif token_queue.peek() and token_queue.peek().get_lexeme() == "--":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() == ";":
+        if token_queue.peek() and token_queue.peek().get_lexeme() == ";":
             node.add(token_queue.remove())
         else:
             error_list.append(SynthaticParseErrors([";"], token_queue.peek()))
+
     return node
 
 
@@ -2783,26 +2956,28 @@ def sp_log_equate(
     """
 
     node = SynthaticNode(production="<Log Equate>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [<Log Compare>, <Log Equate_>]
-    if token_queue.peek().get_lexeme() in [
-        "global",
-        "id",
-        "local",
-        "num",
-        "log",
-        "!",
-        "(",
-        "str",
-    ]:
+    if (
+            token_queue.peek()
+            and token_queue.peek().get_lexeme() in ["global", "local", "!", "("]
+            or temp_token_type == TokenTypes.IDENTIFIER
+            or temp_token_type == TokenTypes.NUMBER
+            or temp_token_type == TokenTypes.RESERVED_WORD
+            or temp_token_type == TokenTypes.STRING
+    ):
         temp = sp_log_compare(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
-        if token_queue.peek().get_lexeme() in ["==", "!="]:
+        # Predicting for production <Log Equate_>
+        local_first_set = ["==", "!="]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_log_equate__(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(SynthaticParseErrors(["==", "!="], token_queue.peek()))
+
     return node
 
 
@@ -2817,30 +2992,32 @@ def sp_args(
     """
 
     node = SynthaticNode(production="<Args>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [<Expr>, <Args List>]
-    if token_queue.peek().get_lexeme() in [
-        "id",
-        "-",
-        "log",
-        "global",
-        "!",
-        "local",
-        "num",
-        "(",
-        "str",
-    ]:
+    if (
+            token_queue.peek()
+            and token_queue.peek().get_lexeme() in ["-", "global", "!", "local", "("]
+            or temp_token_type == TokenTypes.IDENTIFIER
+            or temp_token_type == TokenTypes.RESERVED_WORD
+            or temp_token_type == TokenTypes.NUMBER
+            or temp_token_type == TokenTypes.STRING
+    ):
         temp = sp_expr(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
-        if token_queue.peek().get_lexeme() in [","]:
+        # Predicting for production <Args List>
+        local_first_set = [","]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_args_list(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(SynthaticParseErrors([","], token_queue.peek()))
+
     # Predicting for production []
     else:
         return node
+
     return node
 
 
@@ -2855,38 +3032,42 @@ def sp_log_and__(
     """
 
     node = SynthaticNode(production="<Log And_>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production ['&&', <Log Equate>, <Log And_>]
-    if token_queue.peek().get_lexeme() == "&&":
+    if token_queue.peek() and token_queue.peek().get_lexeme() == "&&":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in [
-            "global",
-            "id",
-            "local",
-            "num",
-            "log",
-            "str",
-            "(",
-            "!",
-        ]:
+        # Predicting for production <Log Equate>
+        local_first_set = ["global", "local", "(", "!"]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = (
+                temp_token_type == TokenTypes.IDENTIFIER
+                or temp_token_type == TokenTypes.NUMBER
+                or temp_token_type == TokenTypes.RESERVED_WORD
+                or temp_token_type == TokenTypes.STRING
+        )
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_log_equate(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["global", "id", "local", "num", "log", "str", "(", "!"],
-                    token_queue.peek(),
-                )
-            )
-        if token_queue.peek().get_lexeme() in ["&&"]:
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+        # Predicting for production <Log And_>
+        local_first_set = ["&&"]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_log_and__(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(SynthaticParseErrors(["&&"], token_queue.peek()))
+
     # Predicting for production []
     else:
         return node
+
     return node
 
 
@@ -2898,27 +3079,28 @@ def sp_or(token_queue: Queue, error_list: list[SynthaticParseErrors]) -> Synthat
     """
 
     node = SynthaticNode(production="<Or>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [<And>, <Or_>]
-    if token_queue.peek().get_lexeme() in [
-        "id",
-        "-",
-        "str",
-        "(",
-        "!",
-        "local",
-        "num",
-        "global",
-        "log",
-    ]:
+    if (
+            token_queue.peek()
+            and token_queue.peek().get_lexeme() in ["-", "(", "!", "local", "global"]
+            or temp_token_type == TokenTypes.IDENTIFIER
+            or temp_token_type == TokenTypes.STRING
+            or temp_token_type == TokenTypes.NUMBER
+            or temp_token_type == TokenTypes.RESERVED_WORD
+    ):
         temp = sp_and(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
-        if token_queue.peek().get_lexeme() in ["||"]:
+        # Predicting for production <Or_>
+        local_first_set = ["||"]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_or__(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(SynthaticParseErrors(["||"], token_queue.peek()))
+
     return node
 
 
@@ -2933,45 +3115,46 @@ def sp_id_value(
     """
 
     node = SynthaticNode(production="<Id Value>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [<Arrays>, <Accesses>]
-    if token_queue.peek().get_lexeme() in ["["]:
+    if token_queue.peek() and token_queue.peek().get_lexeme() in ["["]:
         temp = sp_arrays(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
-        if token_queue.peek().get_lexeme() in ["."]:
-            temp = sp_accesses(token_queue, error_list)
-            if temp and temp.is_not_empty():
-                node.add(temp)
-        else:
-            error_list.append(SynthaticParseErrors(["."], token_queue.peek()))
+    # Predicting for production <Accesses>
+    local_first_set = ["."]
+    if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
+        temp = sp_accesses(token_queue, error_list)
+        if temp and temp.is_not_empty():
+            node.add(temp)
+
     # Predicting for production ['(', <Args>, ')']
-    elif token_queue.peek().get_lexeme() == "(":
+    elif token_queue.peek() and token_queue.peek().get_lexeme() == "(":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in [
-            "id",
-            "-",
-            "log",
-            "(",
-            "!",
-            "local",
-            "num",
-            "str",
-            "global",
-        ]:
+        # Predicting for production <Args>
+        local_first_set = ["-", "(", "!", "local", "global"]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = (
+                temp_token_type == TokenTypes.IDENTIFIER
+                or temp_token_type == TokenTypes.RESERVED_WORD
+                or temp_token_type == TokenTypes.NUMBER
+                or temp_token_type == TokenTypes.STRING
+        )
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_args(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["id", "-", "log", "(", "!", "local", "num", "str", "global"],
-                    token_queue.peek(),
-                )
-            )
-        if token_queue.peek().get_lexeme() == ")":
+        if token_queue.peek() and token_queue.peek().get_lexeme() == ")":
             node.add(token_queue.remove())
         else:
             error_list.append(SynthaticParseErrors([")"], token_queue.peek()))
+
     return node
 
 
@@ -2986,39 +3169,42 @@ def sp_or__(
     """
 
     node = SynthaticNode(production="<Or_>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production ['||', <And>, <Or_>]
-    if token_queue.peek().get_lexeme() == "||":
+    if token_queue.peek() and token_queue.peek().get_lexeme() == "||":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in [
-            "id",
-            "-",
-            "str",
-            "(",
-            "!",
-            "local",
-            "num",
-            "global",
-            "log",
-        ]:
+        # Predicting for production <And>
+        local_first_set = ["-", "(", "!", "local", "global"]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = (
+                temp_token_type == TokenTypes.IDENTIFIER
+                or temp_token_type == TokenTypes.STRING
+                or temp_token_type == TokenTypes.NUMBER
+                or temp_token_type == TokenTypes.RESERVED_WORD
+        )
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_and(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["id", "-", "str", "(", "!", "local", "num", "global", "log"],
-                    token_queue.peek(),
-                )
-            )
-        if token_queue.peek().get_lexeme() in ["||"]:
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+        # Predicting for production <Or_>
+        local_first_set = ["||"]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_or__(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(SynthaticParseErrors(["||"], token_queue.peek()))
+
     # Predicting for production []
     else:
         return node
+
     return node
 
 
@@ -3032,26 +3218,28 @@ def sp_log_and(
     """
 
     node = SynthaticNode(production="<Log And>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [<Log Equate>, <Log And_>]
-    if token_queue.peek().get_lexeme() in [
-        "global",
-        "id",
-        "local",
-        "num",
-        "log",
-        "str",
-        "(",
-        "!",
-    ]:
+    if (
+            token_queue.peek()
+            and token_queue.peek().get_lexeme() in ["global", "local", "(", "!"]
+            or temp_token_type == TokenTypes.IDENTIFIER
+            or temp_token_type == TokenTypes.NUMBER
+            or temp_token_type == TokenTypes.RESERVED_WORD
+            or temp_token_type == TokenTypes.STRING
+    ):
         temp = sp_log_equate(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
-        if token_queue.peek().get_lexeme() in ["&&"]:
+        # Predicting for production <Log And_>
+        local_first_set = ["&&"]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_log_and__(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(SynthaticParseErrors(["&&"], token_queue.peek()))
+
     return node
 
 
@@ -3061,75 +3249,74 @@ def sp_func_decl(
     """
     This function parse tokens for production <Func Decl>\n
     Accepted productions below\n
-    [function, <Param Type>, id, '(', <Params>, ')', '[', <Func Block>, ']']\n
+    [function, <Param Type>, id, '(', <Params>, ')', '{', <Func Block>, '}']\n
     """
 
     node = SynthaticNode(production="<Func Decl>")
-    # Predicting for production [function, <Param Type>, id, '(', <Params>, ')', '[', <Func Block>, ']']
-    if token_queue.peek().get_lexeme() == "function":
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
+    # Predicting for production [function, <Param Type>, id, '(', <Params>, ')', '{', <Func Block>, '}']
+    if token_queue.peek() and token_queue.peek().get_lexeme() == "function":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in [
-            "real",
-            "boolean",
-            "id",
-            "int",
-            "string",
-            "struct",
-        ]:
+        # Predicting for production <Param Type>
+        local_first_set = ["real", "boolean", "int", "string", "struct"]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = temp_token_type == TokenTypes.IDENTIFIER
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_param_type(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["real", "boolean", "id", "int", "string", "struct"],
-                    token_queue.peek(),
-                )
-            )
-        if token_queue.peek().get_lexeme() == "id":
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_token_type() == TokenTypes.IDENTIFIER
+        ):
             node.add(token_queue.remove())
         else:
             error_list.append(SynthaticParseErrors(["id"], token_queue.peek()))
-        if token_queue.peek().get_lexeme() == "(":
+        if token_queue.peek() and token_queue.peek().get_lexeme() == "(":
             node.add(token_queue.remove())
         else:
             error_list.append(SynthaticParseErrors(["("], token_queue.peek()))
-        if token_queue.peek().get_lexeme() in [
-            "id",
-            "boolean",
-            "real",
-            "int",
-            "string",
-            "struct",
-        ]:
+        # Predicting for production <Params>
+        local_first_set = ["boolean", "real", "int", "string", "struct"]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = temp_token_type == TokenTypes.IDENTIFIER
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_params(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["id", "boolean", "real", "int", "string", "struct"],
-                    token_queue.peek(),
-                )
-            )
-        if token_queue.peek().get_lexeme() == ")":
+        if token_queue.peek() and token_queue.peek().get_lexeme() == ")":
             node.add(token_queue.remove())
         else:
             error_list.append(SynthaticParseErrors([")"], token_queue.peek()))
-        if token_queue.peek().get_lexeme() == "[":
+        if token_queue.peek() and token_queue.peek().get_lexeme() == "{":
             node.add(token_queue.remove())
         else:
-            error_list.append(SynthaticParseErrors(["["], token_queue.peek()))
-        if token_queue.peek().get_lexeme() in ["var"]:
+            error_list.append(SynthaticParseErrors(["{"], token_queue.peek()))
+        # Predicting for production <Func Block>
+        local_first_set = ["var"]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_func_block(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(SynthaticParseErrors(["var"], token_queue.peek()))
-        if token_queue.peek().get_lexeme() == "]":
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+        if token_queue.peek() and token_queue.peek().get_lexeme() == "}":
             node.add(token_queue.remove())
         else:
-            error_list.append(SynthaticParseErrors(["]"], token_queue.peek()))
+            error_list.append(SynthaticParseErrors(["}"], token_queue.peek()))
+
     return node
 
 
@@ -3144,22 +3331,27 @@ def sp_param_arrays(
     """
 
     node = SynthaticNode(production="<Param Arrays>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production ['[', ']', <Param Mult Arrays>]
-    if token_queue.peek().get_lexeme() == "[":
+    if token_queue.peek() and token_queue.peek().get_lexeme() == "[":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() == "]":
+        if token_queue.peek() and token_queue.peek().get_lexeme() == "]":
             node.add(token_queue.remove())
         else:
             error_list.append(SynthaticParseErrors(["]"], token_queue.peek()))
-        if token_queue.peek().get_lexeme() in ["["]:
+        # Predicting for production <Param Mult Arrays>
+        local_first_set = ["["]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_param_mult_arrays(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(SynthaticParseErrors(["["], token_queue.peek()))
+
     # Predicting for production []
     else:
         return node
+
     return node
 
 
@@ -3174,26 +3366,34 @@ def sp_param_mult_arrays(
     """
 
     node = SynthaticNode(production="<Param Mult Arrays>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production ['[', num, ']', <Param Mult Arrays>]
-    if token_queue.peek().get_lexeme() == "[":
+    if token_queue.peek() and token_queue.peek().get_lexeme() == "[":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() == "num":
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_token_type() == TokenTypes.NUMBER
+        ):
             node.add(token_queue.remove())
         else:
             error_list.append(SynthaticParseErrors(["num"], token_queue.peek()))
-        if token_queue.peek().get_lexeme() == "]":
+        if token_queue.peek() and token_queue.peek().get_lexeme() == "]":
             node.add(token_queue.remove())
         else:
             error_list.append(SynthaticParseErrors(["]"], token_queue.peek()))
-        if token_queue.peek().get_lexeme() in ["["]:
+        # Predicting for production <Param Mult Arrays>
+        local_first_set = ["["]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_param_mult_arrays(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(SynthaticParseErrors(["["], token_queue.peek()))
+
     # Predicting for production []
     else:
         return node
+
     return node
 
 
@@ -3208,44 +3408,45 @@ def sp_unary(
     """
 
     node = SynthaticNode(production="<Unary>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production ['!', <Unary>]
-    if token_queue.peek().get_lexeme() == "!":
+    if token_queue.peek() and token_queue.peek().get_lexeme() == "!":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in [
-            "id",
-            "-",
-            "log",
-            "(",
-            "!",
-            "local",
-            "num",
-            "str",
-            "global",
-        ]:
+        # Predicting for production <Unary>
+        local_first_set = ["-", "(", "!", "local", "global"]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = (
+                temp_token_type == TokenTypes.IDENTIFIER
+                or temp_token_type == TokenTypes.RESERVED_WORD
+                or temp_token_type == TokenTypes.NUMBER
+                or temp_token_type == TokenTypes.STRING
+        )
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_unary(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["id", "-", "log", "(", "!", "local", "num", "str", "global"],
-                    token_queue.peek(),
-                )
-            )
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+
     # Predicting for production [<Value>]
-    elif token_queue.peek().get_lexeme() in [
-        "global",
-        "id",
-        "-",
-        "num",
-        "log",
-        "(",
-        "local",
-        "str",
-    ]:
+    elif (
+            token_queue.peek()
+            and token_queue.peek().get_lexeme() in ["global", "-", "(", "local"]
+            or temp_token_type == TokenTypes.IDENTIFIER
+            or temp_token_type == TokenTypes.NUMBER
+            or temp_token_type == TokenTypes.RESERVED_WORD
+            or temp_token_type == TokenTypes.STRING
+    ):
         temp = sp_value(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
+
     return node
 
 
@@ -3259,33 +3460,32 @@ def sp_typedef(
     """
 
     node = SynthaticNode(production="<Typedef>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [typedef, <Type>, id, ';']
-    if token_queue.peek().get_lexeme() == "typedef":
+    if token_queue.peek() and token_queue.peek().get_lexeme() == "typedef":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in [
-            "real",
-            "boolean",
-            "int",
-            "struct",
-            "string",
-        ]:
+        # Predicting for production <Type>
+        local_first_set = ["real", "boolean", "int", "struct", "string"]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_type(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["real", "boolean", "int", "struct", "string"], token_queue.peek()
-                )
-            )
-        if token_queue.peek().get_lexeme() == "id":
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_token_type() == TokenTypes.IDENTIFIER
+        ):
             node.add(token_queue.remove())
         else:
             error_list.append(SynthaticParseErrors(["id"], token_queue.peek()))
-        if token_queue.peek().get_lexeme() == ";":
+        if token_queue.peek() and token_queue.peek().get_lexeme() == ";":
             node.add(token_queue.remove())
         else:
             error_list.append(SynthaticParseErrors([";"], token_queue.peek()))
+
     return node
 
 
@@ -3300,26 +3500,42 @@ def sp_var_id(
     """
 
     node = SynthaticNode(production="<Var Id>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [<Var>, <Var List>, ';']
-    if token_queue.peek().get_lexeme() in ["id"]:
+    if (
+            token_queue.peek()
+            and token_queue.peek().get_lexeme() in []
+            or temp_token_type == TokenTypes.IDENTIFIER
+    ):
         temp = sp_var(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
-        if token_queue.peek().get_lexeme() in [",", "="]:
+        # Predicting for production <Var List>
+        local_first_set = [",", "="]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_var_list(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(SynthaticParseErrors([",", "="], token_queue.peek()))
-        if token_queue.peek().get_lexeme() == ";":
+        if token_queue.peek() and token_queue.peek().get_lexeme() == ";":
             node.add(token_queue.remove())
         else:
             error_list.append(SynthaticParseErrors([";"], token_queue.peek()))
+
     # Predicting for production [<Stm Id>]
-    elif token_queue.peek().get_lexeme() in ["(", "--", ".", "[", "=", "++"]:
+    elif token_queue.peek() and token_queue.peek().get_lexeme() in [
+        "(",
+        "--",
+        ".",
+        "[",
+        "=",
+        "++",
+    ]:
         temp = sp_stm_id(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
+
     return node
 
 
@@ -3335,69 +3551,71 @@ def sp_mult__(
     """
 
     node = SynthaticNode(production="<Mult_>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production ['*', <Unary>, <Mult_>]
-    if token_queue.peek().get_lexeme() == "*":
+    if token_queue.peek() and token_queue.peek().get_lexeme() == "*":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in [
-            "id",
-            "-",
-            "log",
-            "(",
-            "!",
-            "local",
-            "num",
-            "str",
-            "global",
-        ]:
+        # Predicting for production <Unary>
+        local_first_set = ["-", "(", "!", "local", "global"]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = (
+                temp_token_type == TokenTypes.IDENTIFIER
+                or temp_token_type == TokenTypes.RESERVED_WORD
+                or temp_token_type == TokenTypes.NUMBER
+                or temp_token_type == TokenTypes.STRING
+        )
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_unary(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["id", "-", "log", "(", "!", "local", "num", "str", "global"],
-                    token_queue.peek(),
-                )
-            )
-        if token_queue.peek().get_lexeme() in ["*", "/"]:
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+        # Predicting for production <Mult_>
+        local_first_set = ["*", "/"]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_mult__(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(SynthaticParseErrors(["*", "/"], token_queue.peek()))
+
     # Predicting for production ['/', <Unary>, <Mult_>]
-    elif token_queue.peek().get_lexeme() == "/":
+    elif token_queue.peek() and token_queue.peek().get_lexeme() == "/":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in [
-            "id",
-            "-",
-            "log",
-            "(",
-            "!",
-            "local",
-            "num",
-            "str",
-            "global",
-        ]:
+        # Predicting for production <Unary>
+        local_first_set = ["-", "(", "!", "local", "global"]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = (
+                temp_token_type == TokenTypes.IDENTIFIER
+                or temp_token_type == TokenTypes.RESERVED_WORD
+                or temp_token_type == TokenTypes.NUMBER
+                or temp_token_type == TokenTypes.STRING
+        )
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_unary(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["id", "-", "log", "(", "!", "local", "num", "str", "global"],
-                    token_queue.peek(),
-                )
-            )
-        if token_queue.peek().get_lexeme() in ["*", "/"]:
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+        # Predicting for production <Mult_>
+        local_first_set = ["*", "/"]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_mult__(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(SynthaticParseErrors(["*", "/"], token_queue.peek()))
+
     # Predicting for production []
     else:
         return node
+
     return node
 
 
@@ -3411,21 +3629,22 @@ def sp_expr(
     """
 
     node = SynthaticNode(production="<Expr>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [<Or>]
-    if token_queue.peek().get_lexeme() in [
-        "id",
-        "-",
-        "str",
-        "global",
-        "!",
-        "local",
-        "num",
-        "log",
-        "(",
-    ]:
+    if (
+            token_queue.peek()
+            and token_queue.peek().get_lexeme() in ["-", "global", "!", "local", "("]
+            or temp_token_type == TokenTypes.IDENTIFIER
+            or temp_token_type == TokenTypes.STRING
+            or temp_token_type == TokenTypes.NUMBER
+            or temp_token_type == TokenTypes.RESERVED_WORD
+    ):
         temp = sp_or(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
+
     return node
 
 
@@ -3440,27 +3659,30 @@ def sp_params(
     """
 
     node = SynthaticNode(production="<Params>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [<Param>, <Params List>]
-    if token_queue.peek().get_lexeme() in [
-        "id",
-        "boolean",
-        "struct",
-        "int",
-        "string",
-        "real",
-    ]:
+    if (
+            token_queue.peek()
+            and token_queue.peek().get_lexeme()
+            in ["boolean", "struct", "int", "string", "real"]
+            or temp_token_type == TokenTypes.IDENTIFIER
+    ):
         temp = sp_param(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
-        if token_queue.peek().get_lexeme() in [","]:
+        # Predicting for production <Params List>
+        local_first_set = [","]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_params_list(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(SynthaticParseErrors([","], token_queue.peek()))
+
     # Predicting for production []
     else:
         return node
+
     return node
 
 
@@ -3472,27 +3694,28 @@ def sp_and(token_queue: Queue, error_list: list[SynthaticParseErrors]) -> Syntha
     """
 
     node = SynthaticNode(production="<And>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [<Equate>, <And_>]
-    if token_queue.peek().get_lexeme() in [
-        "id",
-        "-",
-        "log",
-        "(",
-        "!",
-        "local",
-        "num",
-        "str",
-        "global",
-    ]:
+    if (
+            token_queue.peek()
+            and token_queue.peek().get_lexeme() in ["-", "(", "!", "local", "global"]
+            or temp_token_type == TokenTypes.IDENTIFIER
+            or temp_token_type == TokenTypes.RESERVED_WORD
+            or temp_token_type == TokenTypes.NUMBER
+            or temp_token_type == TokenTypes.STRING
+    ):
         temp = sp_equate(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
-        if token_queue.peek().get_lexeme() in ["&&"]:
+        # Predicting for production <And_>
+        local_first_set = ["&&"]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_and__(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(SynthaticParseErrors(["&&"], token_queue.peek()))
+
     return node
 
 
@@ -3507,26 +3730,44 @@ def sp_const_id(
     """
 
     node = SynthaticNode(production="<Const Id>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [<Const>, <Const List>, ';']
-    if token_queue.peek().get_lexeme() in ["id"]:
+    if (
+            token_queue.peek()
+            and token_queue.peek().get_lexeme() in []
+            or temp_token_type == TokenTypes.IDENTIFIER
+    ):
         temp = sp_const(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
-        if token_queue.peek().get_lexeme() in ["=", ","]:
+        # Predicting for production <Const List>
+        local_first_set = ["=", ","]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_const_list(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(SynthaticParseErrors(["=", ","], token_queue.peek()))
-        if token_queue.peek().get_lexeme() == ";":
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+        if token_queue.peek() and token_queue.peek().get_lexeme() == ";":
             node.add(token_queue.remove())
         else:
             error_list.append(SynthaticParseErrors([";"], token_queue.peek()))
+
     # Predicting for production [<Stm Id>]
-    elif token_queue.peek().get_lexeme() in ["(", "--", ".", "[", "=", "++"]:
+    elif token_queue.peek() and token_queue.peek().get_lexeme() in [
+        "(",
+        "--",
+        ".",
+        "[",
+        "=",
+        "++",
+    ]:
         temp = sp_stm_id(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
+
     return node
 
 
@@ -3542,69 +3783,71 @@ def sp_add__(
     """
 
     node = SynthaticNode(production="<Add_>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production ['+', <Mult>, <Add_>]
-    if token_queue.peek().get_lexeme() == "+":
+    if token_queue.peek() and token_queue.peek().get_lexeme() == "+":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in [
-            "id",
-            "-",
-            "str",
-            "(",
-            "!",
-            "local",
-            "num",
-            "global",
-            "log",
-        ]:
+        # Predicting for production <Mult>
+        local_first_set = ["-", "(", "!", "local", "global"]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = (
+                temp_token_type == TokenTypes.IDENTIFIER
+                or temp_token_type == TokenTypes.STRING
+                or temp_token_type == TokenTypes.NUMBER
+                or temp_token_type == TokenTypes.RESERVED_WORD
+        )
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_mult(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["id", "-", "str", "(", "!", "local", "num", "global", "log"],
-                    token_queue.peek(),
-                )
-            )
-        if token_queue.peek().get_lexeme() in ["+", "-"]:
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+        # Predicting for production <Add_>
+        local_first_set = ["+", "-"]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_add__(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(SynthaticParseErrors(["+", "-"], token_queue.peek()))
+
     # Predicting for production ['-', <Mult>, <Add_>]
-    elif token_queue.peek().get_lexeme() == "-":
+    elif token_queue.peek() and token_queue.peek().get_lexeme() == "-":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in [
-            "id",
-            "-",
-            "str",
-            "(",
-            "!",
-            "local",
-            "num",
-            "global",
-            "log",
-        ]:
+        # Predicting for production <Mult>
+        local_first_set = ["-", "(", "!", "local", "global"]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = (
+                temp_token_type == TokenTypes.IDENTIFIER
+                or temp_token_type == TokenTypes.STRING
+                or temp_token_type == TokenTypes.NUMBER
+                or temp_token_type == TokenTypes.RESERVED_WORD
+        )
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_mult(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["id", "-", "str", "(", "!", "local", "num", "global", "log"],
-                    token_queue.peek(),
-                )
-            )
-        if token_queue.peek().get_lexeme() in ["+", "-"]:
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+        # Predicting for production <Add_>
+        local_first_set = ["+", "-"]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_add__(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(SynthaticParseErrors(["+", "-"], token_queue.peek()))
+
     # Predicting for production []
     else:
         return node
+
     return node
 
 
@@ -3620,98 +3863,96 @@ def sp_func_stm(
     """
 
     node = SynthaticNode(production="<Func Stm>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [if, '(', <Log Expr>, ')', then, <Func Normal Stm>, <Else Stm>]
-    if token_queue.peek().get_lexeme() == "if":
+    if token_queue.peek() and token_queue.peek().get_lexeme() == "if":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() == "(":
+        if token_queue.peek() and token_queue.peek().get_lexeme() == "(":
             node.add(token_queue.remove())
         else:
             error_list.append(SynthaticParseErrors(["("], token_queue.peek()))
-        if token_queue.peek().get_lexeme() in [
-            "global",
-            "id",
-            "local",
-            "num",
-            "log",
-            "!",
-            "(",
-            "str",
-        ]:
+        # Predicting for production <Log Expr>
+        local_first_set = ["global", "local", "!", "("]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = (
+                temp_token_type == TokenTypes.IDENTIFIER
+                or temp_token_type == TokenTypes.NUMBER
+                or temp_token_type == TokenTypes.RESERVED_WORD
+                or temp_token_type == TokenTypes.STRING
+        )
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_log_expr(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["global", "id", "local", "num", "log", "!", "(", "str"],
-                    token_queue.peek(),
-                )
-            )
-        if token_queue.peek().get_lexeme() == ")":
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+        if token_queue.peek() and token_queue.peek().get_lexeme() == ")":
             node.add(token_queue.remove())
         else:
             error_list.append(SynthaticParseErrors([")"], token_queue.peek()))
-        if token_queue.peek().get_lexeme() == "then":
+        if token_queue.peek() and token_queue.peek().get_lexeme() == "then":
             node.add(token_queue.remove())
         else:
             error_list.append(SynthaticParseErrors(["then"], token_queue.peek()))
-        if token_queue.peek().get_lexeme() in [
-            "read",
-            "id",
-            "local",
-            "return",
-            "{",
-            "global",
-            "print",
-        ]:
+        # Predicting for production <Func Normal Stm>
+        local_first_set = ["read", "local", "return", "{", "global", "print"]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = temp_token_type == TokenTypes.IDENTIFIER
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_func_normal_stm(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["read", "id", "local", "return", "{", "global", "print"],
-                    token_queue.peek(),
-                )
-            )
-        if token_queue.peek().get_lexeme() in ["else"]:
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+        # Predicting for production <Else Stm>
+        local_first_set = ["else"]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_else_stm(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(SynthaticParseErrors(["else"], token_queue.peek()))
+
     # Predicting for production [while, '(', <Log Expr>, ')', <Func Stm>]
-    elif token_queue.peek().get_lexeme() == "while":
+    elif token_queue.peek() and token_queue.peek().get_lexeme() == "while":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() == "(":
+        if token_queue.peek() and token_queue.peek().get_lexeme() == "(":
             node.add(token_queue.remove())
         else:
             error_list.append(SynthaticParseErrors(["("], token_queue.peek()))
-        if token_queue.peek().get_lexeme() in [
-            "global",
-            "id",
-            "local",
-            "num",
-            "log",
-            "!",
-            "(",
-            "str",
-        ]:
+        # Predicting for production <Log Expr>
+        local_first_set = ["global", "local", "!", "("]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = (
+                temp_token_type == TokenTypes.IDENTIFIER
+                or temp_token_type == TokenTypes.NUMBER
+                or temp_token_type == TokenTypes.RESERVED_WORD
+                or temp_token_type == TokenTypes.STRING
+        )
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_log_expr(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["global", "id", "local", "num", "log", "!", "(", "str"],
-                    token_queue.peek(),
-                )
-            )
-        if token_queue.peek().get_lexeme() == ")":
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+        if token_queue.peek() and token_queue.peek().get_lexeme() == ")":
             node.add(token_queue.remove())
         else:
             error_list.append(SynthaticParseErrors([")"], token_queue.peek()))
-        if token_queue.peek().get_lexeme() in [
+        # Predicting for production <Func Stm>
+        local_first_set = [
             "read",
             "while",
             "return",
@@ -3719,42 +3960,32 @@ def sp_func_stm(
             "print",
             "global",
             "local",
-            "id",
             "if",
-        ]:
+        ]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = temp_token_type == TokenTypes.IDENTIFIER
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_func_stm(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(
-                SynthaticParseErrors(
-                    [
-                        "read",
-                        "while",
-                        "return",
-                        "{",
-                        "print",
-                        "global",
-                        "local",
-                        "id",
-                        "if",
-                    ],
-                    token_queue.peek(),
-                )
-            )
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+
     # Predicting for production [<Func Normal Stm>]
-    elif token_queue.peek().get_lexeme() in [
-        "read",
-        "id",
-        "local",
-        "return",
-        "{",
-        "global",
-        "print",
-    ]:
+    elif (
+            token_queue.peek()
+            and token_queue.peek().get_lexeme()
+            in ["read", "local", "return", "{", "global", "print"]
+            or temp_token_type == TokenTypes.IDENTIFIER
+    ):
         temp = sp_func_normal_stm(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
+
     return node
 
 
@@ -3768,29 +3999,28 @@ def sp_compare(
     """
 
     node = SynthaticNode(production="<Compare>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [<Add>, <Compare_>]
-    if token_queue.peek().get_lexeme() in [
-        "id",
-        "-",
-        "str",
-        "global",
-        "!",
-        "local",
-        "num",
-        "log",
-        "(",
-    ]:
+    if (
+            token_queue.peek()
+            and token_queue.peek().get_lexeme() in ["-", "global", "!", "local", "("]
+            or temp_token_type == TokenTypes.IDENTIFIER
+            or temp_token_type == TokenTypes.STRING
+            or temp_token_type == TokenTypes.NUMBER
+            or temp_token_type == TokenTypes.RESERVED_WORD
+    ):
         temp = sp_add(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
-        if token_queue.peek().get_lexeme() in ["<=", "<", ">=", ">"]:
+        # Predicting for production <Compare_>
+        local_first_set = ["<=", "<", ">=", ">"]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_compare__(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(
-                SynthaticParseErrors(["<=", "<", ">=", ">"], token_queue.peek())
-            )
+
     return node
 
 
@@ -3804,27 +4034,28 @@ def sp_equate(
     """
 
     node = SynthaticNode(production="<Equate>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [<Compare>, <Equate_>]
-    if token_queue.peek().get_lexeme() in [
-        "id",
-        "-",
-        "log",
-        "global",
-        "!",
-        "local",
-        "num",
-        "(",
-        "str",
-    ]:
+    if (
+            token_queue.peek()
+            and token_queue.peek().get_lexeme() in ["-", "global", "!", "local", "("]
+            or temp_token_type == TokenTypes.IDENTIFIER
+            or temp_token_type == TokenTypes.RESERVED_WORD
+            or temp_token_type == TokenTypes.NUMBER
+            or temp_token_type == TokenTypes.STRING
+    ):
         temp = sp_compare(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
-        if token_queue.peek().get_lexeme() in ["==", "!="]:
+        # Predicting for production <Equate_>
+        local_first_set = ["==", "!="]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_equate__(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(SynthaticParseErrors(["==", "!="], token_queue.peek()))
+
     return node
 
 
@@ -3840,67 +4071,71 @@ def sp_log_equate__(
     """
 
     node = SynthaticNode(production="<Log Equate_>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production ['==', <Log Compare>, <Log Equate_>]
-    if token_queue.peek().get_lexeme() == "==":
+    if token_queue.peek() and token_queue.peek().get_lexeme() == "==":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in [
-            "global",
-            "id",
-            "local",
-            "num",
-            "log",
-            "!",
-            "(",
-            "str",
-        ]:
+        # Predicting for production <Log Compare>
+        local_first_set = ["global", "local", "!", "("]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = (
+                temp_token_type == TokenTypes.IDENTIFIER
+                or temp_token_type == TokenTypes.NUMBER
+                or temp_token_type == TokenTypes.RESERVED_WORD
+                or temp_token_type == TokenTypes.STRING
+        )
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_log_compare(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["global", "id", "local", "num", "log", "!", "(", "str"],
-                    token_queue.peek(),
-                )
-            )
-        if token_queue.peek().get_lexeme() in ["==", "!="]:
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+        # Predicting for production <Log Equate_>
+        local_first_set = ["==", "!="]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_log_equate__(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(SynthaticParseErrors(["==", "!="], token_queue.peek()))
+
     # Predicting for production ['!=', <Log Compare>, <Log Equate_>]
-    elif token_queue.peek().get_lexeme() == "!=":
+    elif token_queue.peek() and token_queue.peek().get_lexeme() == "!=":
         node.add(token_queue.remove())
-        if token_queue.peek().get_lexeme() in [
-            "global",
-            "id",
-            "local",
-            "num",
-            "log",
-            "!",
-            "(",
-            "str",
-        ]:
+        # Predicting for production <Log Compare>
+        local_first_set = ["global", "local", "!", "("]
+        temp_token_type = token_queue.peek().get_token_type()
+        token_verification = (
+                temp_token_type == TokenTypes.IDENTIFIER
+                or temp_token_type == TokenTypes.NUMBER
+                or temp_token_type == TokenTypes.RESERVED_WORD
+                or temp_token_type == TokenTypes.STRING
+        )
+        if (
+                token_queue.peek()
+                and token_queue.peek().get_lexeme() in local_first_set
+                or token_verification
+        ):
             temp = sp_log_compare(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
         else:
-            error_list.append(
-                SynthaticParseErrors(
-                    ["global", "id", "local", "num", "log", "!", "(", "str"],
-                    token_queue.peek(),
-                )
-            )
-        if token_queue.peek().get_lexeme() in ["==", "!="]:
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+        # Predicting for production <Log Equate_>
+        local_first_set = ["==", "!="]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_log_equate__(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(SynthaticParseErrors(["==", "!="], token_queue.peek()))
+
     # Predicting for production []
     else:
         return node
+
     return node
 
 
@@ -3914,27 +4149,28 @@ def sp_mult(
     """
 
     node = SynthaticNode(production="<Mult>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [<Unary>, <Mult_>]
-    if token_queue.peek().get_lexeme() in [
-        "id",
-        "-",
-        "log",
-        "(",
-        "!",
-        "local",
-        "num",
-        "str",
-        "global",
-    ]:
+    if (
+            token_queue.peek()
+            and token_queue.peek().get_lexeme() in ["-", "(", "!", "local", "global"]
+            or temp_token_type == TokenTypes.IDENTIFIER
+            or temp_token_type == TokenTypes.RESERVED_WORD
+            or temp_token_type == TokenTypes.NUMBER
+            or temp_token_type == TokenTypes.STRING
+    ):
         temp = sp_unary(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
-        if token_queue.peek().get_lexeme() in ["*", "/"]:
+        # Predicting for production <Mult_>
+        local_first_set = ["*", "/"]
+        if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
             temp = sp_mult__(token_queue, error_list)
             if temp and temp.is_not_empty():
                 node.add(temp)
-        else:
-            error_list.append(SynthaticParseErrors(["*", "/"], token_queue.peek()))
+
     return node
 
 
@@ -3950,38 +4186,39 @@ def sp_program(
     node = SynthaticNode(production="<Program>")
     if not token_queue.peek():
         return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [<Const Block>, <Var Block>, <Decls>, <Start Block>, <Decls>]
-    # print(token_queue.peek())
-    if token_queue.peek().get_lexeme() in ["const"]:
+    if token_queue.peek() and token_queue.peek().get_lexeme() in ["const"]:
         temp = sp_const_block(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
-    if token_queue.peek().get_lexeme() in ["var"]:
+    # Predicting for production <Var Block>
+    local_first_set = ["var"]
+    if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
         temp = sp_var_block(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
-    if token_queue.peek().get_lexeme() in [
-        "typedef",
-        "struct",
-        "function",
-        "procedure",
-    ]:
+    # Predicting for production <Decls>
+    local_first_set = ["typedef", "struct", "function", "procedure"]
+    if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
         temp = sp_decls(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
-    if token_queue.peek().get_lexeme() in ["start"]:
+    # Predicting for production <Start Block>
+    local_first_set = ["start"]
+    if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
         temp = sp_start_block(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
-    if token_queue.peek().get_lexeme() in [
-        "typedef",
-        "struct",
-        "function",
-        "procedure",
-    ]:
+        else:
+            error_list.append(SynthaticParseErrors(local_first_set, token_queue.peek()))
+    # Predicting for production <Decls>
+    local_first_set = ["typedef", "struct", "function", "procedure"]
+    if token_queue.peek() and token_queue.peek().get_lexeme() in local_first_set:
         temp = sp_decls(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
+
     return node
 
 
@@ -3995,20 +4232,22 @@ def sp_log_expr(
     """
 
     node = SynthaticNode(production="<Log Expr>")
+    if not token_queue.peek():
+        return node
+    temp_token_type = token_queue.peek().get_token_type()
     # Predicting for production [<Log Or>]
-    if token_queue.peek().get_lexeme() in [
-        "global",
-        "id",
-        "local",
-        "num",
-        "log",
-        "str",
-        "(",
-        "!",
-    ]:
+    if (
+            token_queue.peek()
+            and token_queue.peek().get_lexeme() in ["global", "local", "(", "!"]
+            or temp_token_type == TokenTypes.IDENTIFIER
+            or temp_token_type == TokenTypes.NUMBER
+            or temp_token_type == TokenTypes.RESERVED_WORD
+            or temp_token_type == TokenTypes.STRING
+    ):
         temp = sp_log_or(token_queue, error_list)
         if temp and temp.is_not_empty():
             node.add(temp)
+
     return node
 
 
