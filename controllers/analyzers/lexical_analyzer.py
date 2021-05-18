@@ -278,7 +278,11 @@ class LexicalAnalyzer:
         file_pointer.write("\n")
         file_pointer.write("".join(str(v) for v in self.__errors_list))
 
-        SynthaticAnalyzer().start(self.__tokens)
+        temp_synthatic = SynthaticAnalyzer()
+        temp_synthatic.start(self.__tokens)
+
+        file_pointer.write("\n".join(str(v) for v in temp_synthatic.get_errors()))
+        file_pointer.write("\n")
         self.__tokens.clear()
         self.__errors_list.clear()
 

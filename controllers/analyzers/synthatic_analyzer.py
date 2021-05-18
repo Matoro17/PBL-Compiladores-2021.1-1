@@ -21,7 +21,6 @@ class SynthaticAnalyzer:
                 return received
 
             queue_list.remove()
-
         return received
 
     def get_errors(self) -> list[SynthaticParseErrors]:
