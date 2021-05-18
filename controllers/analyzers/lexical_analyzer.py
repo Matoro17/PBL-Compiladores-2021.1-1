@@ -5,6 +5,7 @@ import util.lexycal.lexical_validators as validators
 from controllers.analyzers.synthatic_analyzer import SynthaticAnalyzer
 from models.lexical_information import LexicalInformation
 from models.token import Token
+from util.helpers.string_helpers import input_to_output
 from util.lexycal.lexical_states import LexicalStates
 from util.lexycal.lexical_structure import LexicalStructure
 from util.token_types import TokenTypes
@@ -271,7 +272,7 @@ class LexicalAnalyzer:
         else:
             print("Finished! With lexical errors")
 
-        file_pointer = open(self.__filename.replace(r"./input\entrada", r"./output\saida"), 'w')
+        file_pointer = open(input_to_output(self.__filename), 'w')
 
         file_pointer.write("".join(str(v) for v in self.__tokens))
         file_pointer.write("\n")

@@ -15,7 +15,7 @@ class SynthaticAnalyzer:
     def start(self, queue: list[Token]) -> SynthaticNode:
         queue_list = Queue(queue)
         received: SynthaticNode = SynthaticNode(queue[0].get_lexeme())
-        while len(queue) > 0:
+        while queue_list.is_not_empty():
             received = self.__production_functions[EProduction.START](queue_list, self.__errors)
             if not received.is_empty():
                 return received
